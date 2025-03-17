@@ -19,7 +19,7 @@
 #![no_std]
 #![no_main]
 
-use core::arch::global_asm;
+use core::{arch::global_asm, panicking::panic};
 
 use log::*;
 #[macro_use]

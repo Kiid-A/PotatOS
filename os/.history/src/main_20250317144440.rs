@@ -19,7 +19,7 @@
 #![no_std]
 #![no_main]
 
-use core::arch::global_asm;
+use core::{arch::global_asm, panicking::panic};
 
 use log::*;
 #[macro_use]
@@ -66,7 +66,6 @@ pub fn rust_main() -> ! {
     clear_bss();
     logging::init();
     println!("[kernel] Hello, world!");
-    // panic!("Goodbye");
     trace!(
         "[kernel] .text [{:#x}, {:#x})",
         stext as usize, etext as usize
@@ -87,4 +86,6 @@ pub fn rust_main() -> ! {
     trap::init();
     batch::init();
     batch::run_next_app();
+
+    panic("Exit successfully");
 }

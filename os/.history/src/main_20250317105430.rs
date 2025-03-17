@@ -29,7 +29,6 @@ mod lang_items;
 mod logging;
 mod sbi;
 mod sync;
-mod stack_trace;
 pub mod syscall;
 pub mod trap;
 
@@ -66,7 +65,6 @@ pub fn rust_main() -> ! {
     clear_bss();
     logging::init();
     println!("[kernel] Hello, world!");
-    // panic!("Goodbye");
     trace!(
         "[kernel] .text [{:#x}, {:#x})",
         stext as usize, etext as usize
