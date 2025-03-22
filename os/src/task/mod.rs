@@ -153,6 +153,19 @@ pub fn add_initproc() {
     let _initproc = INITPROC.clone();
 }
 
+pub fn boot_screen() {
+    let boot_screen = r#"
+    ______     _        _   _____ _____ 
+    | ___ \   | |      | | |  _  /  ___|
+    | |_/ /__ | |_ __ _| |_| | | \ `--. 
+    |  __/ _ \| __/ _` | __| | | |`--. \
+    | | | (_) | || (_| | |_\ \_/ /\__/ /
+    \_|  \___/ \__\__,_|\__|\___/\____/      v0.1
+                                      
+"#;
+    println!("{}", boot_screen);
+}
+
 pub fn check_signals_of_current() -> Option<(i32, &'static str)> {
     let process = current_process();
     let process_inner = process.inner_exclusive_access();

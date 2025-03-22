@@ -73,6 +73,7 @@ pub fn rust_main() -> ! {
     timer::set_next_trigger();
     board::device_init();
     // fs::list_apps();
+    task::boot_screen();
     task::add_initproc();
     *DEV_NON_BLOCKING_ACCESS.exclusive_access() = true;
     task::run_tasks();
