@@ -76,6 +76,9 @@ impl Drop for BlockCache {
 
 const BLOCK_CACHE_SIZE: usize = 16;
 
+// Arc保证多线程下数据的生命周期
+// Mutex保证多线程下数据的安全性
+// 结合使用实现了多线程共享可变数据
 pub struct BlockCacheManager {
     queue: VecDeque<(usize, Arc<Mutex<BlockCache>>)>,
 }
@@ -98,6 +101,7 @@ impl BlockCacheManager {
             // substitute
             if self.queue.len() == BLOCK_CACHE_SIZE {
                 // from front to tail
+                // TODO: try to use LRU algorithm here
                 if let Some((idx, _)) = self
                     .queue
                     .iter()

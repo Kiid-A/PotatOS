@@ -103,11 +103,11 @@ impl DiskInode {
     pub fn total_blocks(size: u32) -> u32 {
         let data_blocks = Self::_data_blocks(size) as usize;
         let mut total = data_blocks as usize;
-        // indirect1
+        // indirect1: add 1 index block
         if data_blocks > INODE_DIRECT_COUNT {
             total += 1;
         }
-        // indirect2
+        // indirect2: add indirect2 and calc how many blocks it points to
         if data_blocks > INDIRECT1_BOUND {
             total += 1;
             // sub indirect1
