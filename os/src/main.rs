@@ -58,16 +58,16 @@ lazy_static! {
 #[no_mangle]
 pub fn rust_main() -> ! {
     clear_bss();
-    logging::init();
+    // logging::init();
     mm::init();
     UART.init();
-    info!("KERN: init gpu");
+    // info!("KERN: init gpu");
     let _gpu = GPU_DEVICE.clone();
-    info!("KERN: init keyboard");
+    // info!("KERN: init keyboard");
     let _keyboard = KEYBOARD_DEVICE.clone();
-    info!("KERN: init mouse");
+    // info!("KERN: init mouse");
     let _mouse = MOUSE_DEVICE.clone();
-    info!("KERN: init trap");
+    // info!("KERN: init trap");
     trap::init();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
