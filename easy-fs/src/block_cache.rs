@@ -90,6 +90,7 @@ impl BlockCacheManager {
         }
     }
 
+    /// block cache method: put current block into cache
     pub fn get_block_cache(
         &mut self,
         block_id: usize,
@@ -129,6 +130,7 @@ lazy_static! {
         Mutex::new(BlockCacheManager::new());
 }
 
+/// put current block into cache
 pub fn get_block_cache(
     block_id: usize,
     block_device: Arc<dyn BlockDevice>,

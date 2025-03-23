@@ -1,10 +1,11 @@
 use super::{
     block_cache_sync_all, get_block_cache, Bitmap, BlockDevice, DiskInode, DiskInodeType, Inode,
-    SuperBlock,
+    SuperBlock, DirEntry, DIRENT_SZ,
 };
 use crate::BLOCK_SZ;
 use alloc::sync::Arc;
 use spin::Mutex;
+use alloc::vec::Vec;
 
 pub struct EasyFileSystem {
     pub block_device: Arc<dyn BlockDevice>,
@@ -72,7 +73,17 @@ impl EasyFileSystem {
         get_block_cache(root_inode_block_id as usize, Arc::clone(&block_device))
             .lock()
             .modify(root_inode_offset, |disk_inode: &mut DiskInode| {
+                // root inode is special
                 disk_inode.initialize(DiskInodeType::Directory);
+                let mut v: Vec<u32> = Vec::new();
+                for _ in 0..2 {
+                    v.push(efs.alloc_data());
+                }
+                disk_inode.increase_size((DIRENT_SZ * 2) as u32, v, &block_device);
+                let dirent_self = DirEntry::new(".", 0);
+                let dirent_parent = DirEntry::new("..", 0);
+                disk_inode.write_at(0, dirent_self.as_bytes(), &block_device);
+                disk_inode.write_at(DIRENT_SZ, dirent_parent.as_bytes(), &block_device);
             });
         block_cache_sync_all();
         Arc::new(Mutex::new(efs))
