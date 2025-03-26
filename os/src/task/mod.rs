@@ -9,7 +9,7 @@ mod switch;
 mod task;
 
 use self::id::TaskUserRes;
-use crate::fs::{open_file, OpenFlags};
+use crate::fs::{open_file, OpenFlags, ROOT_INODE};
 use crate::sbi::shutdown;
 use alloc::{sync::Arc, vec::Vec};
 use lazy_static::*;
@@ -145,7 +145,7 @@ lazy_static! {
     pub static ref INITPROC: Arc<ProcessControlBlock> = {
         let inode = open_file("initproc", OpenFlags::RDONLY).unwrap();
         let v = inode.read_all();
-        ProcessControlBlock::new(v.as_slice())
+        ProcessControlBlock::new(v.as_slice(), ROOT_INODE.clone())
     };
 }
 

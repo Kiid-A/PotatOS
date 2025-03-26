@@ -1,7 +1,11 @@
-use crate::fs::{make_pipe, open_file, OpenFlags};
+use core::mem::size_of;
+
+use crate::fs::{make_pipe, open_file, OpenFlags, Stat};
 use crate::mm::{translated_byte_buffer, translated_refmut, translated_str, UserBuffer};
 use crate::task::{current_process, current_user_token};
+use alloc::string::String;
 use alloc::sync::Arc;
+use log::info;
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let token = current_user_token();
@@ -96,4 +100,62 @@ pub fn sys_dup(fd: usize) -> isize {
     let new_fd = inner.alloc_fd();
     inner.fd_table[new_fd] = Some(Arc::clone(inner.fd_table[fd].as_ref().unwrap()));
     new_fd as isize
+}
+
+pub fn sys_get_cwd(buf: *mut u8, len: usize) -> isize {
+    0
+    // let process = current_process();
+    // let inner = process.inner_exclusive_access();
+    // let cwd = inner.cwd.clone();
+    // let path = cwd.get_cwd();
+    // let bytes = path.as_bytes();
+    
+    // if len < bytes.len() {
+    //     return -1;
+    // }
+
+    // unsafe {
+    //     let len = len.min(bytes.len());
+    //     core::ptr::copy_nonoverlapping(bytes.as_ptr(), buf, len);
+    // }
+
+    // len as isize
+}
+
+pub fn sys_mkdir(pathname: *const u8) -> isize {
+    let process = current_process();
+    let token = current_user_token();
+    let path = translated_str(token, pathname);
+    let inner = process.inner_exclusive_access();
+    let cwd = inner.cwd.clone();
+    drop(inner);
+    info!("cwd inode number: {}", cwd.get_inode_id());
+    let dir = cwd.create_dir(&path);
+    if dir.is_none() {
+        return -1;
+    }
+    0
+}
+
+pub fn sys_fstat(fd: usize, st_addr: usize) -> isize {
+    let process = current_process();
+    let token = current_user_token();
+    let stat = translated_refmut(token, st_addr as *mut Stat);
+    let inner = process.inner_exclusive_access();
+    match inner.fd_table[fd] {
+        Some(ref osinode) => {
+            let new_st = osinode.stat();
+            stat.ino = new_st.ino;
+            stat.mode = new_st.mode;
+            stat.nlink = new_st.nlink;
+            return 0;
+        }
+        None => {
+            return -1;
+        }
+    }
+}
+
+pub fn sys_linkat() {
+
 }

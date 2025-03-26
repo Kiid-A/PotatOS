@@ -2,7 +2,8 @@ use super::net_interrupt_handler;
 use super::socket::{add_socket, pop_data, remove_socket};
 use super::LOSE_NET_STACK;
 use super::NET_DEVICE;
-use crate::fs::File;
+use crate::fs::fstat::StatMode;
+use crate::fs::{File, Stat};
 use alloc::vec;
 use lose_net_stack::packets::udp::UDPPacket;
 use lose_net_stack::IPv4;
@@ -85,6 +86,10 @@ impl File for UDP {
         );
         NET_DEVICE.transmit(&udp_packet.build_data());
         len
+    }
+
+    fn stat(&self) -> Stat {
+        panic!("Not implemented");
     }
 }
 

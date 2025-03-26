@@ -1,11 +1,12 @@
-use super::File;
+use super::fstat::StatMode;
+use super::{File, Stat};
 use crate::drivers::BLOCK_DEVICE;
 use crate::mm::UserBuffer;
 use crate::sync::UPIntrFreeCell;
-use alloc::sync::Arc;
+use alloc::{string::String, sync::Arc};
 use alloc::vec::Vec;
 use bitflags::*;
-use easy_fs::{EasyFileSystem, Inode};
+use easy_fs::{DiskInodeType, EasyFileSystem, Inode};
 use lazy_static::*;
 
 pub struct OSInode {
@@ -40,6 +41,9 @@ impl OSInode {
             v.extend_from_slice(&buffer[..len]);
         }
         v
+    }
+    pub fn inode(&self) -> Arc<Inode> {
+        self.inner.exclusive_access().inode.clone()
     }
 }
 
@@ -82,6 +86,7 @@ impl OpenFlags {
     }
 }
 
+// TODO: fix opendir & openfile
 pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
     let (readable, writable) = flags.read_write();
     if flags.contains(OpenFlags::CREATE) {
@@ -92,7 +97,7 @@ pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
         } else {
             // create file
             ROOT_INODE
-                .create(name)
+                .create_file(name)
                 .map(|inode| Arc::new(OSInode::new(readable, writable, inode)))
         }
     } else {
@@ -135,5 +140,15 @@ impl File for OSInode {
             total_write_size += write_size;
         }
         total_write_size
+    }
+    fn stat(&self) -> Stat {
+        let inner = self.inner.exclusive_access();
+        let ino = inner.inode.get_ino() as u64;
+        let mode = match inner.inode.get_file_type() {
+            DiskInodeType::File => StatMode::FILE,
+            DiskInodeType::Directory => StatMode::DIR,
+        };
+        let nlink = inner.inode.get_nlink();
+        Stat::new(ino, mode, nlink)
     }
 }

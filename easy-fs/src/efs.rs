@@ -1,3 +1,5 @@
+use core::mem::size_of;
+
 use super::{
     block_cache_sync_all, get_block_cache, Bitmap, BlockDevice, DiskInode, DiskInodeType, Inode,
     SuperBlock, DirEntry, DIRENT_SZ,
@@ -116,7 +118,7 @@ impl EasyFileSystem {
         // acquire efs lock temporarily
         let (block_id, block_offset) = efs.lock().get_disk_inode_pos(0);
         // release efs lock
-        Inode::new(block_id, block_offset, Arc::clone(efs), block_device)
+        Inode::new(block_id, block_offset, Arc::clone(efs), block_device, 0)
     }
 
     pub fn get_disk_inode_pos(&self, inode_id: u32) -> (u32, usize) {
@@ -127,6 +129,13 @@ impl EasyFileSystem {
             block_id,
             (inode_id % inodes_per_block) as usize * inode_size,
         )
+    }
+
+    /// Get inode id based upon block id and block offset
+    pub fn get_ino(&self, block_id: usize, block_offset: usize) -> usize {
+        let inode_size = size_of::<DiskInode>();
+        let inode_cnt = (BLOCK_SZ / inode_size) as usize;
+        (block_id - self.inode_area_start_block as usize) * inode_cnt + block_offset / inode_size
     }
 
     pub fn get_data_block_id(&self, data_block_id: u32) -> u32 {

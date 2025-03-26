@@ -1,4 +1,4 @@
-use super::File;
+use super::{fstat::StatMode, File, Stat};
 use crate::mm::UserBuffer;
 use crate::sync::UPIntrFreeCell;
 use alloc::sync::{Arc, Weak};
@@ -169,5 +169,8 @@ impl File for Pipe {
                 }
             }
         }
+    }
+    fn stat(&self) -> Stat {
+        panic!("Not implemented");
     }
 }

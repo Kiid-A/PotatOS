@@ -28,3 +28,20 @@ pub fn read(fd: usize, buf: &mut [u8]) -> isize {
 pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
 }
+
+pub fn get_cwd(buf: &mut [u8]) -> isize {
+    sys_get_cwd(buf, buf.len())
+}
+
+pub fn mkdir(path: &str) -> isize {
+    sys_mkdir(path)
+}
+
+pub fn fstat(fd: usize, st: &Stat) -> isize {
+    sys_fstat(fd, st)
+}
+
+pub fn lstat(fd: usize) -> isize {
+    unimplemented!("lstat");
+    // sys_lstat(fd)
+}

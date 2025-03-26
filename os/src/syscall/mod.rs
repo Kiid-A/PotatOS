@@ -7,6 +7,8 @@ const SYSCALL_CLOSE: usize = 57;
 const SYSCALL_PIPE: usize = 59;
 const SYSCALL_READ: usize = 63;
 const SYSCALL_WRITE: usize = 64;
+const SYSCALL_FSTAT: usize = 80;
+const SYSCALL_MKDIR: usize = 83;
 const SYSCALL_EXIT: usize = 93;
 const SYSCALL_SLEEP: usize = 101;
 const SYSCALL_YIELD: usize = 124;
@@ -49,6 +51,8 @@ use process::*;
 use sync::*;
 use thread::*;
 
+use crate::fs::OpenFlags;
+
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {
         SYSCALL_DUP => sys_dup(args[0]),
@@ -60,6 +64,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_PIPE => sys_pipe(args[0] as *mut usize),
         SYSCALL_READ => sys_read(args[0], args[1] as *const u8, args[2]),
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
+        SYSCALL_FSTAT => sys_fstat(args[0], args[1]),
+        SYSCALL_MKDIR => sys_mkdir(args[0] as *const u8),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
         SYSCALL_SLEEP => sys_sleep(args[0]),
         SYSCALL_YIELD => sys_yield(),
@@ -85,6 +91,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_FRAMEBUFFER_FLUSH => sys_framebuffer_flush(),
         SYSCALL_EVENT_GET => sys_event_get(),
         SYSCALL_KEY_PRESSED => sys_key_pressed(),
+        SYSCALL_GET_CWD => sys_get_cwd(args[0] as *mut u8, args[1]),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

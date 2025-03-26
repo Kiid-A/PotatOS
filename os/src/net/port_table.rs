@@ -2,7 +2,8 @@ use alloc::{sync::Arc, vec::Vec};
 use lazy_static::lazy_static;
 use lose_net_stack::packets::tcp::TCPPacket;
 
-use crate::fs::File;
+use crate::fs::fstat::StatMode;
+use crate::fs::{File, Stat};
 use crate::sync::UPIntrFreeCell;
 use crate::task::TaskControlBlock;
 
@@ -137,5 +138,8 @@ impl File for PortFd {
 
     fn write(&self, _buf: crate::mm::UserBuffer) -> usize {
         0
+    }
+    fn stat(&self) -> Stat {
+        panic!("Not implemented");
     }
 }

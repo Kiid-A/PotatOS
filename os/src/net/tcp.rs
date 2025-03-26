@@ -4,6 +4,8 @@ use lose_net_stack::IPv4;
 use lose_net_stack::MacAddress;
 use lose_net_stack::TcpFlags;
 
+use crate::fs::fstat::StatMode;
+use crate::fs::Stat;
 use crate::{drivers::NET_DEVICE, fs::File};
 
 use super::socket::get_s_a_by_index;
@@ -105,6 +107,10 @@ impl File for TCP {
         };
         NET_DEVICE.transmit(&tcp_packet.build_data());
         len
+    }
+
+    fn stat(&self) -> Stat {
+        panic!("Not implemented");
     }
 }
 

@@ -11,6 +11,7 @@ use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec;
 use alloc::vec::Vec;
+use easy_fs::Inode;
 
 pub struct ProcessControlBlock {
     // immutable
@@ -32,6 +33,8 @@ pub struct ProcessControlBlockInner {
     pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
+
+    pub cwd: Arc<Inode>,
 }
 
 impl ProcessControlBlockInner {
@@ -71,7 +74,7 @@ impl ProcessControlBlock {
         self.inner.exclusive_access()
     }
 
-    pub fn new(elf_data: &[u8]) -> Arc<Self> {
+    pub fn new(elf_data: &[u8], inode: Arc<Inode>) -> Arc<Self> {
         // memory_set with elf program headers/trampoline/trap context/user stack
         let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
         // allocate a pid
@@ -99,6 +102,8 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+
+                    cwd: inode.clone(),
                 })
             },
         });
@@ -218,6 +223,8 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+
+                    cwd: parent.cwd.clone(),
                 })
             },
         });

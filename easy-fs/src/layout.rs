@@ -75,6 +75,7 @@ pub struct DiskInode {
     pub indirect2: u32,
     pub indirect3: u32,
     type_: DiskInodeType,
+    pub nlink: u32,
 }
 
 impl DiskInode {
@@ -85,6 +86,7 @@ impl DiskInode {
         self.indirect1 = 0;
         self.indirect2 = 0;
         self.type_ = type_;
+        self.nlink = 1;
     }
     pub fn is_dir(&self) -> bool {
         self.type_ == DiskInodeType::Directory

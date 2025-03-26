@@ -81,7 +81,7 @@ fn easy_fs_pack() -> std::io::Result<()> {
         let mut all_data: Vec<u8> = Vec::new();
         host_file.read_to_end(&mut all_data).unwrap();
         // create a file in easy-fs
-        let inode = root_inode.create(app.as_str()).unwrap();
+        let inode = root_inode.create_file(app.as_str()).unwrap();
         // write data to easy-fs
         inode.write_at(0, all_data.as_slice());
     }
@@ -107,8 +107,8 @@ fn efs_test() -> std::io::Result<()> {
     EasyFileSystem::create(block_file.clone(), 4096 * 20, 1);
     let efs = EasyFileSystem::open(block_file.clone());
     let root_inode = EasyFileSystem::root_inode(&efs);
-    root_inode.create("filea");
-    root_inode.create("fileb");
+    root_inode.create_file("filea");
+    root_inode.create_file("fileb");
     for name in root_inode.ls() {
         println!("{}", name);
     }
@@ -199,8 +199,8 @@ fn efs_dir_test() -> std::io::Result<()> {
     EasyFileSystem::create(block_file.clone(), 4096, 1);
     let efs = EasyFileSystem::open(block_file.clone());
     let root = Arc::new(EasyFileSystem::root_inode(&efs));
-    root.create("f1");
-    root.create("f2");
+    root.create_file("f1");
+    root.create_file("f2");
 
     let d1 = root.create_dir("d1").unwrap();
     
@@ -229,5 +229,31 @@ fn efs_dir_test() -> std::io::Result<()> {
     for app in apps {
         println!("{}", app);
     }
+    Ok(())
+}
+
+#[test]
+fn pwd_test() -> std::io::Result<()> {
+    let block_file = Arc::new(BlockFile(Mutex::new({
+        let f = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open("target/fs.img")?;
+        f.set_len(8192 * 512).unwrap();
+        f
+    })));
+    EasyFileSystem::create(block_file.clone(), 4096, 1);
+    let efs = EasyFileSystem::open(block_file.clone());
+    let root = Arc::new(EasyFileSystem::root_inode(&efs));
+    root.create_file("f1");
+    root.create_file("f2");
+
+    let d1 = root.create_dir("d1").unwrap();
+    let f3 = d1.create_file("f3").unwrap();
+    let d2 = d1.create_dir("d2").unwrap();
+    let f4 = d2.create_file("f4").unwrap();
+
+
     Ok(())
 }
