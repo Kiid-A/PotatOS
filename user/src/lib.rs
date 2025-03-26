@@ -59,7 +59,7 @@ impl Stat {
             dev: 0,
             ino: 0,
             mode: StatMode::NULL,
-            nlink: 0,
+            nlink: 1,
             pad: [0; 7],
         }
     }

@@ -7,6 +7,8 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use log::info;
 
+use super::process;
+
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let token = current_user_token();
     let process = current_process();
@@ -128,7 +130,7 @@ pub fn sys_mkdir(pathname: *const u8) -> isize {
     let path = translated_str(token, pathname);
     let inner = process.inner_exclusive_access();
     let cwd = inner.cwd.clone();
-    drop(inner);
+    // drop(inner);
     info!("cwd inode number: {}", cwd.get_inode_id());
     let dir = cwd.create_dir(&path);
     if dir.is_none() {
@@ -156,6 +158,22 @@ pub fn sys_fstat(fd: usize, st_addr: usize) -> isize {
     }
 }
 
-pub fn sys_linkat() {
+// TODO: link path shall be absolute ones. try to update it to support relative path 
+pub fn sys_linkat(old_path_ptr: *const u8, new_path_ptr: *const u8) -> isize {
+    let process = current_process();
+    let token = current_user_token();
+    let old_path = translated_str(token, old_path_ptr);
+    let new_path = translated_str(token, new_path_ptr);
+    let inner = process.inner_exclusive_access();
+    let cwd = inner.cwd.clone();
+    cwd.linkat(&old_path, &new_path)
+}
 
+pub fn sys_unlinkat(path_ptr: *const u8) -> isize {
+    let process = current_process();
+    let token = current_user_token();
+    let path = translated_str(token, path_ptr);
+    let inner = process.inner_exclusive_access();
+    let cwd = inner.cwd.clone();
+    cwd.unlinkat(&path) 
 }

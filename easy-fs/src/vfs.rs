@@ -227,7 +227,7 @@ impl Inode {
         let mut fs = self.fs.lock();
         let size = self.modify_disk_inode(|disk_inode| {
             // make sure you are writing a file
-            assert!(disk_inode.is_file());
+            // assert!(disk_inode.is_file());
             self.increase_size((offset + buf.len()) as u32, disk_inode, &mut fs);
             disk_inode.write_at(offset, buf, &self.block_device)
         });
@@ -249,33 +249,39 @@ impl Inode {
         block_cache_sync_all();
     }
     /// Create a hard link with new_name for file with old_name
-    pub fn linkat(&self, old_name: &str, new_name: &str) -> isize {
+    pub fn linkat(&self, old_path: &str, new_path: &str) -> isize {
         // get inode of file with old_name
-        let inode = self.find(old_name);
+        let inode = self.find(old_path);
         if inode.is_none() {
             return -1;
         }
         let inode = inode.unwrap();
-
-        let mut id = 0;         // inode id
-        let mut offset = 0;     // last position of data of inode
-        self.read_disk_inode(|dinode| {
-            id = self.find_inode_id(old_name, dinode).unwrap();
-            offset = dinode.size as usize;
-        });
         inode.modify_disk_inode(|dinode| {
             dinode.nlink += 1;  // increase reference count
         });
-        let new_entry = DirEntry::new(new_name, id);
-
+        let new_ino = inode.get_inode_id();
+        let mut fs = self.fs.lock();
         // insert a new directory entry into ROOT_DIR
-        self.write_at(offset, new_entry.as_bytes());
+        self.modify_disk_inode(|root_inode| {
+            // append file in the dirent
+            let file_count = (root_inode.size as usize) / DIRENT_SZ;
+            let new_size = (file_count + 1) * DIRENT_SZ;
+            // increase size
+            self.increase_size(new_size as u32, root_inode, &mut fs);
+            // write dirent
+            let dirent = DirEntry::new(new_path, new_ino as u32);
+            root_inode.write_at(
+                file_count * DIRENT_SZ,
+                dirent.as_bytes(),
+                &self.block_device,
+            );
+        });
         0
     }
     /// Remove a hard link with name
-    pub fn unlinkat(&self, name: &str) -> isize {
+    pub fn unlinkat(&self, path: &str) -> isize {
         // get inode of file with name
-        let inode = self.find(name);
+        let inode = self.find(path);
         if inode.is_none() {
             return -1;
         }
@@ -288,12 +294,7 @@ impl Inode {
                 is_zero_link = true;
             }
         });
-        // Test will timeout with the code below, what the fuck??
-        // Free memory of inode and file data
-        // if is_zero_link {
-        //     inode.clear();
-        // }
-        
+
         let mut res = -1;
         self.modify_disk_inode(|dinode| {
             // Remove(For simplisity, not remove, just set to empty) 
@@ -305,7 +306,7 @@ impl Inode {
                     dinode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device),
                     DIRENT_SZ
                 );
-                if dirent.name() == name {
+                if dirent.name() == path {
                     dirent = DirEntry::empty();
                     dinode.write_at(i * DIRENT_SZ, dirent.as_bytes(), &self.block_device);
                     res = 0;

@@ -45,3 +45,11 @@ pub fn lstat(fd: usize) -> isize {
     unimplemented!("lstat");
     // sys_lstat(fd)
 }
+
+pub fn link(old_path: &str, new_path: &str) -> isize {
+    sys_linkat(old_path, new_path)
+}
+
+pub fn unlink(path: &str) -> isize {
+    sys_unlinkat(path)
+}

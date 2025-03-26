@@ -6,6 +6,8 @@ const SYSCALL_DUP: usize = 24;
 const SYSCALL_CONNECT: usize = 29;
 const SYSCALL_LISTEN: usize = 30;
 const SYSCALL_ACCEPT: usize = 31;
+const SYSCALL_UNLINKAT: usize = 35;
+const SYSCALL_LINKAT: usize = 37;
 const SYSCALL_OPEN: usize = 56;
 const SYSCALL_CLOSE: usize = 57;
 const SYSCALL_PIPE: usize = 59;
@@ -215,4 +217,12 @@ pub fn sys_mkdir(pathname: &str) -> isize {
 
 pub fn sys_fstat(fd: usize, st: &Stat) -> isize {
     syscall(SYSCALL_FSTAT, [fd, st as *const _ as usize, 0])
+}
+
+pub fn sys_linkat(old_path: &str, new_path: &str) -> isize {
+    syscall(SYSCALL_LINKAT, [old_path.as_ptr() as usize, new_path.as_ptr() as usize, 0])   
+}
+
+pub fn sys_unlinkat(path: &str) -> isize {
+    syscall(SYSCALL_UNLINKAT, [path.as_ptr() as usize, 0, 0])
 }
