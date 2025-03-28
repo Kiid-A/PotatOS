@@ -18,7 +18,7 @@ use core::result;
 use alloc::string::String;
 use alloc::vec::Vec;
 use user_lib::console::getchar;
-use user_lib::{chdir, close, dup, exec, fork, fstat, getcwd, mkdir, open, pipe, waitpid, OpenFlags, Stat, StatMode};
+use user_lib::{chdir, close, dup, exec, fork, fstat, getcwd, ls, mkdir, open, pipe, remove, waitpid, OpenFlags, Stat, StatMode};
 
 #[derive(Debug)]
 struct ProcessArguments {
@@ -29,62 +29,97 @@ struct ProcessArguments {
 }
 
 // TODO: BuiltingCommand: {chdir, mkdir, pwd, echo, exit, ...}
-fn exec_builtin_cmd(args: &Vec<String>) -> Option<isize> {
+fn exec_builtin_cmd(args: &Vec<String>) -> isize {
     match args[0].as_str() {
-        "chdir\0" => {
+        "cd\0" => {
             if args.len() != 2 {
                 println!("chdir: missing argument");
-                return Some(1);
+                return 1;
             }
             let result = chdir(args[1].as_str());
             if result == -1 {
                 println!("chdir: failed to change directory");
             }
-            Some(result)
+            result
         }
         "mkdir\0" => {
             if args.len() != 2 {
                 println!("mkdir: missing argument");
-                return Some(1);
+                return 1;
             }
             let result = mkdir(args[1].as_str());
             if result == -1 {
                 println!("mkdir: failed to create directory");
             }
-            Some(result)
+            result
         },
         "pwd\0"   => {
             let mut buffer = [0u8; 1024]; // 1KiB
             let len = getcwd(&mut buffer);
             if len < 0 {
                 println!("get cwd failed!");
-                return Some(-1);
+                return -1;
             }
             let cwd = core::str::from_utf8(&buffer[..len as usize]).unwrap();
             println!("cwd: {}", cwd);
-            Some(0)
+            0
+        },
+        "ls\0" => {
+            ls();
+            0
         },
         "fstat\0" => {
-            unimplemented!();
-            // if args.len() != 2 {
-            //     println!("Usage: fstat <file>");
-            //     return Some(-1);
-            // }
-            // let fd = open(args[0].as_str(), OpenFlags::WRONLY);
-            // assert!(fd > 0);
-            // let fd = fd as usize;
-            // let stat = Stat::new();
-            // fstat(fd, &stat);
-            // println!("find file: {}", fd);
-            // let mode = if stat.mode.clone() == StatMode::FILE {
-            //     "file"
-            // } else {
-            //     "directory"
-            // };
-            // println!("dev: {}, inode: {}, mode: {}, nlinks: {}", stat.dev, stat.ino, mode, stat.nlink);
-            // Some(0)
+            // unimplemented!();
+            if args.len() != 2 {
+                println!("Usage: fstat <file>");
+                return -1;
+            }
+            let fd = open(args[1].as_str(), OpenFlags::WRONLY);
+            if fd < 0 {
+                println!("Failed to open file: {}", args[1]);
+                return -1;
+            }
+            let fd = fd as usize;
+            let stat = Stat::new();
+            fstat(fd, &stat);
+            println!("find file: {}", fd);
+            let mode = if stat.mode.clone() == StatMode::FILE {
+                "file"
+            } else {
+                "directory"
+            };
+            println!("dev: {}, inode: {}, mode: {}, nlinks: {}", stat.dev, stat.ino, mode, stat.nlink);
+            0
         },
-        _ => None,   
+        "touch\0" => {
+            if args.len() != 2 {
+                println!("Usage: touch <file>");
+                return -1;
+            }
+            let fd = open(args[1].as_str(), OpenFlags::CREATE | OpenFlags::RDONLY);
+            close(fd as usize);
+            0    
+        },
+        "rm\0" => {
+            if args.len() == 2 {
+                if remove(args[1].as_str(), "OP") == -1 {
+                    println!("failed to remove {}", args[1]);
+                }
+            } else if args.len() == 3 {
+                if args[1] != "-r\0" {
+                    println!("Unrecognized Option");
+                    return -1;
+                }
+                if remove(args[2].as_str(), args[1].as_str()) == -1 {
+                    println!("failed to remove {}", args[1]);
+                }
+            } else {
+                println!("Usage: remove [-r] <file/dir> ");
+                return -1;
+            }
+            0
+        },
+        _ => -1,   
     }
 }
 
@@ -186,7 +221,7 @@ pub fn main() -> i32 {
                         let mut children: Vec<_> = Vec::new();
                         for (i, process_argument) in process_arguments_list.iter().enumerate() {
                             let args_copy = &process_argument.args_copy;
-                            if let Some(result) = exec_builtin_cmd(args_copy) {
+                            if exec_builtin_cmd(args_copy) == 0 {
                                 println!("execute builtin: {}", args_copy[0].as_str());
                                 continue;
                             }
@@ -194,7 +229,7 @@ pub fn main() -> i32 {
                             if pid == 0 {
                                 let input = &process_argument.input;
                                 let output = &process_argument.output;
-                                let args_copy = &process_argument.args_copy;
+                                // let args_copy = &process_argument.args_copy;
                                 let args_addr = &process_argument.args_addr;
                                 // redirect input
                                 if !input.is_empty() {
@@ -242,7 +277,7 @@ pub fn main() -> i32 {
                                 }
                                 // execute new application
                                 if exec(args_copy[0].as_str(), args_addr.as_slice()) == -1 {
-                                    println!("Error when executing!");
+                                    println!("Error when executing {}", args_copy[0].as_str());
                                     return -4;
                                 }
                                 unreachable!();

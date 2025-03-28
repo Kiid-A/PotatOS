@@ -45,9 +45,9 @@ pub fn fstat(fd: usize, st: &Stat) -> isize {
     sys_fstat(fd, st)
 }
 
-pub fn lstat(fd: usize) -> isize {
-    unimplemented!("lstat");
-    // sys_lstat(fd)
+pub fn ls() -> isize {
+    // unimplemented!("lstat");
+    sys_ls()
 }
 
 pub fn link(old_path: &str, new_path: &str) -> isize {
@@ -56,4 +56,8 @@ pub fn link(old_path: &str, new_path: &str) -> isize {
 
 pub fn unlink(path: &str) -> isize {
     sys_unlinkat(path)
+}
+
+pub fn remove(path: &str, args: &str) -> isize {
+    sys_remove(path, args)
 }

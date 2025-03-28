@@ -7,7 +7,7 @@ use crate::mm::{translated_byte_buffer, translated_ref, translated_refmut, trans
 use crate::task::{current_process, current_user_token};
 use alloc::string::String;
 use alloc::sync::Arc;
-use easy_fs::Inode;
+use easy_fs::{DiskInodeType, Inode};
 use log::info;
 
 use super::process;
@@ -155,9 +155,9 @@ pub fn sys_fstat(fd: usize, st_addr: usize) -> isize {
     let inner = process.inner_exclusive_access(file!(), line!());
     match inner.fd_table[fd].clone() {
         Some(osinode) => {
+            drop(inner);
             // *stat = osinode.stat();
             let new_st = osinode.stat();
-            drop(inner);
             stat.ino = new_st.ino;
             stat.mode = new_st.mode;
             stat.nlink = new_st.nlink;
@@ -219,5 +219,75 @@ pub fn sys_chdir(path_ptr: *const u8) -> isize {
         return -1;
     }
     
+    0
+}
+
+pub fn sys_ls() -> isize {
+    let process = current_process();
+    let inner = process.inner_exclusive_access(file!(), line!());
+    let cwd = inner.cwd.clone();
+    drop(inner);
+    for app in cwd.clone().ls() {
+        println!("{}", app);
+    }
+    0
+}
+
+// -r means remove dir recursively or normal remove for file
+pub fn sys_remove(path_ptr: *const u8, args: *const u8) -> isize {
+    let process = current_process();
+    let token = current_user_token();
+    let path = translated_str(token, path_ptr);
+    let arg = translated_str(token, args);
+    let inner = process.inner_exclusive_access(file!(), line!());
+    let cwd = inner.cwd.clone();
+    drop(inner);
+    let target_inode = cwd.find(path.as_str());
+    if target_inode.is_none() {
+        println!("no such a file: {}", path);
+        return -1;
+    }
+    let target_inode = target_inode.unwrap();
+    let mut flag = 0;
+    match target_inode.get_file_type() {
+        DiskInodeType::File => {
+            flag = cwd.unlinkat(&path);
+            if flag == -1 {
+                println!("Failed to unlink: {}", path);
+            }
+        },
+        DiskInodeType::Directory => {
+            if arg != "-r" {
+                // shall be '-r'
+                println!("add '-r' to remove dir");
+                return -1;
+            }
+            remove_dir(target_inode.clone());
+            flag = cwd.unlinkat(&path);
+            if flag == -1 {
+                println!("Failed to unlink: {}", path);
+            }
+        },
+    };
+    0
+}
+
+pub fn remove_dir(inode: Arc<Inode>) -> isize {
+    match inode.get_file_type() {
+        DiskInodeType::Directory => {
+            let child = inode.ls();
+            for c_name in child {
+                if c_name == ".." || c_name == "." {
+                    continue;
+                }
+                let c_inode = inode.find(&c_name).unwrap().clone();
+                remove_dir(c_inode);
+            }
+            inode.clear();
+        },
+        DiskInodeType::File => {
+            inode.clear();
+        }
+    };
     0
 }

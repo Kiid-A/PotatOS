@@ -489,7 +489,7 @@ impl DiskInode {
     ) -> usize {
         let mut start = offset;
         let end = (offset + buf.len()).min(self.size as usize);
-        assert!(start <= end);
+        assert!(start <= end, "start: {} end: {}", start, end);
         let mut start_block = start / BLOCK_SZ;
         let mut write_size = 0usize;
         loop {

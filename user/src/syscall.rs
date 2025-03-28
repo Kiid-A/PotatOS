@@ -17,6 +17,7 @@ const SYSCALL_READ: usize = 63;
 const SYSCALL_WRITE: usize = 64;
 const SYSCALL_FSTAT: usize = 80;
 const SYSCALL_MKDIR: usize = 83;
+const SYSCALL_REMOVE: usize = 84;
 const SYSCALL_EXIT: usize = 93;
 const SYSCALL_SLEEP: usize = 101;
 const SYSCALL_YIELD: usize = 124;
@@ -29,6 +30,7 @@ const SYSCALL_WAITPID: usize = 260;
 const SYSCALL_THREAD_CREATE: usize = 1000;
 const SYSCALL_GETTID: usize = 1001;
 const SYSCALL_WAITTID: usize = 1002;
+const SYSCALL_LS: usize = 1008;
 const SYSCALL_MUTEX_CREATE: usize = 1010;
 const SYSCALL_MUTEX_LOCK: usize = 1011;
 const SYSCALL_MUTEX_UNLOCK: usize = 1012;
@@ -226,4 +228,12 @@ pub fn sys_linkat(old_path: &str, new_path: &str) -> isize {
 
 pub fn sys_unlinkat(path: &str) -> isize {
     syscall(SYSCALL_UNLINKAT, [path.as_ptr() as usize, 0, 0])
+}
+
+pub fn sys_ls() -> isize {
+    syscall(SYSCALL_LS, [0, 0, 0])
+}
+
+pub fn sys_remove(path: &str, args: &str) -> isize {
+    syscall(SYSCALL_REMOVE, [path.as_ptr() as usize, args.as_ptr() as usize, 0])
 }

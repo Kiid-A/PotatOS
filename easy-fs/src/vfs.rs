@@ -103,9 +103,9 @@ impl Inode {
             let inode_id = get_block_cache(block_id as usize, self.block_device.clone())
                 .lock()
                 .read(block_offset, |disk_inode: &DiskInode| {
-                    if disk_inode.is_file() {
-                        return None;
-                    }
+                    // if disk_inode.is_file() {
+                    //     return None;
+                    // }
                     real_name = name.to_string().clone();
                     self.find_inode_id(name, disk_inode)
                 });
@@ -252,10 +252,11 @@ impl Inode {
         size
     }
 
+    /// clear only filetype, or make sure you are removing an empty dir
     pub fn clear(&self) {
         let mut fs = self.fs.lock();
         self.modify_disk_inode(|disk_inode| {
-            assert!(disk_inode.is_file());
+            // assert!(disk_inode.is_file());
             let size = disk_inode.size;
             let data_blocks_dealloc = disk_inode.clear_size(&self.block_device);
             assert!(data_blocks_dealloc.len() == DiskInode::total_blocks(size) as usize);
@@ -312,11 +313,16 @@ impl Inode {
             }
         });
 
+        if is_zero_link {
+            inode.clear();
+        }
+
         let mut res = -1;
         self.modify_disk_inode(|dinode| {
             // Remove(For simplisity, not remove, just set to empty) 
             // the directory entry with name in the ROOT_DIR
             let fcnt = (dinode.size as usize) / DIRENT_SZ;
+            let mut pos = 0 as usize;
             for i in 0..fcnt {
                 let mut dirent = DirEntry::empty();
                 assert_eq!(
@@ -324,11 +330,22 @@ impl Inode {
                     DIRENT_SZ
                 );
                 if dirent.name() == path {
-                    dirent = DirEntry::empty();
-                    dinode.write_at(i * DIRENT_SZ, dirent.as_bytes(), &self.block_device);
+                    // dirent = DirEntry::empty();
+                    // dinode.write_at(i * DIRENT_SZ, dirent.as_bytes(), &self.block_device);
                     res = 0;
+                    pos = i+1;
+                    // dinode.decrease_size(((fcnt-1) * DIRENT_SZ) as u32, &self.block_device);
                     break;
                 }
+            }
+            if res == 0 {
+                let mut dirent = DirEntry::empty();
+                for i in pos..(fcnt+1) {
+                    dinode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device);
+                    dinode.write_at((i-1) * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device);
+                }
+                let new_size = (fcnt-1) * DIRENT_SZ;
+                dinode.size = new_size as u32;
             }
         });
         res

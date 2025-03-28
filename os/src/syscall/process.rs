@@ -56,7 +56,7 @@ pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {
         }
     }
     let process = current_process();
-    println!("current pid: {}", process.clone().pid.0);
+    // println!("current pid: {}", process.clone().pid.0);
     let cwd = process.inner_exclusive_access(file!(), line!()).cwd.clone();
     if let Some(app_inode) = open_file(cwd.clone(), path.as_str(), OpenFlags::RDONLY) {
         let all_data = app_inode.read_all();
