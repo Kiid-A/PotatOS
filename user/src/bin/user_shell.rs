@@ -13,10 +13,12 @@ const DL: u8 = 0x7fu8;
 const BS: u8 = 0x08u8;
 const LINE_START: &str = ">> ";
 
+use core::result;
+
 use alloc::string::String;
 use alloc::vec::Vec;
 use user_lib::console::getchar;
-use user_lib::{close, dup, exec, fork, open, pipe, waitpid, OpenFlags};
+use user_lib::{chdir, close, dup, exec, fork, fstat, getcwd, mkdir, open, pipe, waitpid, OpenFlags, Stat, StatMode};
 
 #[derive(Debug)]
 struct ProcessArguments {
@@ -25,6 +27,67 @@ struct ProcessArguments {
     args_copy: Vec<String>,
     args_addr: Vec<*const u8>,
 }
+
+// TODO: BuiltingCommand: {chdir, mkdir, pwd, echo, exit, ...}
+fn exec_builtin_cmd(args: &Vec<String>) -> Option<isize> {
+    match args[0].as_str() {
+        "chdir\0" => {
+            if args.len() != 2 {
+                println!("chdir: missing argument");
+                return Some(1);
+            }
+            let result = chdir(args[1].as_str());
+            if result == -1 {
+                println!("chdir: failed to change directory");
+            }
+            Some(result)
+        }
+        "mkdir\0" => {
+            if args.len() != 2 {
+                println!("mkdir: missing argument");
+                return Some(1);
+            }
+            let result = mkdir(args[1].as_str());
+            if result == -1 {
+                println!("mkdir: failed to create directory");
+            }
+            Some(result)
+        },
+        "pwd\0"   => {
+            let mut buffer = [0u8; 1024]; // 1KiB
+            let len = getcwd(&mut buffer);
+            if len < 0 {
+                println!("get cwd failed!");
+                return Some(-1);
+            }
+            let cwd = core::str::from_utf8(&buffer[..len as usize]).unwrap();
+            println!("cwd: {}", cwd);
+            Some(0)
+        },
+        "fstat\0" => {
+            unimplemented!();
+            // if args.len() != 2 {
+            //     println!("Usage: fstat <file>");
+            //     return Some(-1);
+            // }
+            // let fd = open(args[0].as_str(), OpenFlags::WRONLY);
+            // assert!(fd > 0);
+            // let fd = fd as usize;
+            // let stat = Stat::new();
+            // fstat(fd, &stat);
+            // println!("find file: {}", fd);
+            // let mode = if stat.mode.clone() == StatMode::FILE {
+            //     "file"
+            // } else {
+            //     "directory"
+            // };
+            // println!("dev: {}, inode: {}, mode: {}, nlinks: {}", stat.dev, stat.ino, mode, stat.nlink);
+            // Some(0)
+        },
+        _ => None,   
+    }
+}
+
 
 impl ProcessArguments {
     pub fn new(command: &str) -> Self {
@@ -122,6 +185,11 @@ pub fn main() -> i32 {
                         }
                         let mut children: Vec<_> = Vec::new();
                         for (i, process_argument) in process_arguments_list.iter().enumerate() {
+                            let args_copy = &process_argument.args_copy;
+                            if let Some(result) = exec_builtin_cmd(args_copy) {
+                                println!("execute builtin: {}", args_copy[0].as_str());
+                                continue;
+                            }
                             let pid = fork();
                             if pid == 0 {
                                 let input = &process_argument.input;

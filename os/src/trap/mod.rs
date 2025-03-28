@@ -156,6 +156,16 @@ pub fn trap_from_kernel(_trap_cx: &TrapContext) {
             check_timer();
             // do not schedule now
         }
+        Trap::Exception(Exception::LoadPageFault) => {
+            println!(
+                "[kernel] trap_handler: {:?} in application, bad addr = {:#x}, bad instruction = \
+                 {:#x}, kernel killed it.",
+                scause.cause(),
+                stval,
+                current_trap_cx().sepc,
+            );
+            current_add_signal(SignalFlags::SIGSEGV);
+        }
         _ => {
             panic!(
                 "Unsupported trap from kernel: {:?}, stval = {:#x}!",

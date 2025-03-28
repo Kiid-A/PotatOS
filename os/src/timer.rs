@@ -55,7 +55,7 @@ lazy_static! {
 }
 
 pub fn add_timer(expire_ms: usize, task: Arc<TaskControlBlock>) {
-    let mut timers = TIMERS.exclusive_access();
+    let mut timers = TIMERS.exclusive_access(file!(), line!());
     timers.push(TimerCondVar { expire_ms, task });
 }
 

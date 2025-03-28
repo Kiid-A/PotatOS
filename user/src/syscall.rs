@@ -2,12 +2,14 @@ use alloc::vec::Vec;
 
 use crate::{OpenFlags, Stat};
 
+const SYSCALL_GETCWD: usize = 17;
 const SYSCALL_DUP: usize = 24;
 const SYSCALL_CONNECT: usize = 29;
 const SYSCALL_LISTEN: usize = 30;
 const SYSCALL_ACCEPT: usize = 31;
 const SYSCALL_UNLINKAT: usize = 35;
 const SYSCALL_LINKAT: usize = 37;
+const SYSCALL_CHDIR: usize = 49;
 const SYSCALL_OPEN: usize = 56;
 const SYSCALL_CLOSE: usize = 57;
 const SYSCALL_PIPE: usize = 59;
@@ -24,7 +26,6 @@ const SYSCALL_GETPID: usize = 172;
 const SYSCALL_FORK: usize = 220;
 const SYSCALL_EXEC: usize = 221;
 const SYSCALL_WAITPID: usize = 260;
-const SYSCALL_GET_CWD: usize = 444;
 const SYSCALL_THREAD_CREATE: usize = 1000;
 const SYSCALL_GETTID: usize = 1001;
 const SYSCALL_WAITTID: usize = 1002;
@@ -203,17 +204,17 @@ pub fn sys_key_pressed() -> isize {
     syscall(SYSCALL_KEY_PRESSED, [0, 0, 0])
 }
 
-pub fn sys_get_cwd(buf: &[u8], len: usize) -> isize {
-    syscall(SYSCALL_GET_CWD, [buf.as_ptr() as usize, len, 0])
+pub fn sys_getcwd(buf: &[u8], len: usize) -> isize {
+    syscall(SYSCALL_GETCWD, [buf.as_ptr() as usize, len, 0])
+}
+
+pub fn sys_chdir(path: &str) -> isize {
+    syscall(SYSCALL_CHDIR, [path.as_ptr() as usize, 0, 0])
 }
 
 pub fn sys_mkdir(pathname: &str) -> isize {
     syscall(SYSCALL_MKDIR, [pathname.as_ptr() as usize, 0, 0])
 }
-
-// pub fn sys_ls(path: &str) -> Vec<&[u8]> {
-//     syscall(SYSCALL_LS, [path.as_ptr() as usize, 0, 0])
-// }
 
 pub fn sys_fstat(fd: usize, st: &Stat) -> isize {
     syscall(SYSCALL_FSTAT, [fd, st as *const _ as usize, 0])

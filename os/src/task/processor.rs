@@ -36,7 +36,7 @@ lazy_static! {
 
 pub fn run_tasks() {
     loop {
-        let mut processor = PROCESSOR.exclusive_access();
+        let mut processor = PROCESSOR.exclusive_access(file!(), line!());
         if let Some(task) = fetch_task() {
             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
             // access coming task TCB exclusively
@@ -57,11 +57,11 @@ pub fn run_tasks() {
 }
 
 pub fn take_current_task() -> Option<Arc<TaskControlBlock>> {
-    PROCESSOR.exclusive_access().take_current()
+    PROCESSOR.exclusive_access(file!(), line!()).take_current()
 }
 
 pub fn current_task() -> Option<Arc<TaskControlBlock>> {
-    PROCESSOR.exclusive_access().current()
+    PROCESSOR.exclusive_access(file!(), line!()).current()
 }
 
 pub fn current_process() -> Arc<ProcessControlBlock> {
@@ -76,14 +76,14 @@ pub fn current_user_token() -> usize {
 pub fn current_trap_cx() -> &'static mut TrapContext {
     current_task()
         .unwrap()
-        .inner_exclusive_access()
+        .inner_exclusive_access(file!(), line!())
         .get_trap_cx()
 }
 
 pub fn current_trap_cx_user_va() -> usize {
     current_task()
         .unwrap()
-        .inner_exclusive_access()
+        .inner_exclusive_access(file!(), line!())
         .res
         .as_ref()
         .unwrap()

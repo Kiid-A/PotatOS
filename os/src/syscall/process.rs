@@ -32,9 +32,9 @@ pub fn sys_fork() -> isize {
     let new_process = current_process.fork();
     let new_pid = new_process.getpid();
     // modify trap context of new_task, because it returns immediately after switching
-    let new_process_inner = new_process.inner_exclusive_access();
+    let new_process_inner = new_process.inner_exclusive_access(file!(), line!());
     let task = new_process_inner.tasks[0].as_ref().unwrap();
-    let trap_cx = task.inner_exclusive_access().get_trap_cx();
+    let trap_cx = task.inner_exclusive_access(file!(), line!()).get_trap_cx();
     // we do not have to move to next instruction since we have done it before
     // for child process, fork returns 0
     trap_cx.x[10] = 0;
@@ -55,9 +55,11 @@ pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {
             args = args.add(1);
         }
     }
-    if let Some(app_inode) = open_file(path.as_str(), OpenFlags::RDONLY) {
+    let process = current_process();
+    println!("current pid: {}", process.clone().pid.0);
+    let cwd = process.inner_exclusive_access(file!(), line!()).cwd.clone();
+    if let Some(app_inode) = open_file(cwd.clone(), path.as_str(), OpenFlags::RDONLY) {
         let all_data = app_inode.read_all();
-        let process = current_process();
         let argc = args_vec.len();
         process.exec(all_data.as_slice(), args_vec);
         // return argc because cx.x[10] will be covered with it later
@@ -72,33 +74,40 @@ pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {
 pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
     let process = current_process();
     // find a child process
-
-    let mut inner = process.inner_exclusive_access();
-    if !inner
-        .children
-        .iter()
-        .any(|p| pid == -1 || pid as usize == p.getpid())
-    {
-        return -1;
-        // ---- release current PCB
-    }
-    let pair = inner.children.iter().enumerate().find(|(_, p)| {
-        // ++++ temporarily access child PCB exclusively
-        p.inner_exclusive_access().is_zombie && (pid == -1 || pid as usize == p.getpid())
-        // ++++ release child PCB
-    });
-    if let Some((idx, _)) = pair {
-        let child = inner.children.remove(idx);
-        // confirm that child will be deallocated after being removed from children list
-        assert_eq!(Arc::strong_count(&child), 1);
-        let found_pid = child.getpid();
-        // ++++ temporarily access child PCB exclusively
-        let exit_code = child.inner_exclusive_access().exit_code;
-        // ++++ release child PCB
-        *translated_refmut(inner.memory_set.token(), exit_code_ptr) = exit_code;
-        found_pid as isize
-    } else {
-        -2
+    loop {
+        let mut inner = process.inner_exclusive_access(file!(), line!());
+        if !inner
+            .children
+            .iter()
+            .any(|p| pid == -1 || pid as usize == p.getpid())
+        {
+            drop(inner);
+            return -1;
+            // ---- release current PCB
+        }
+        let pair = inner.children.iter().enumerate().find(|(_, p)| {
+            // ++++ temporarily access child PCB exclusively
+            let inner = p.inner_exclusive_access(file!(), line!());
+            let flag = inner.is_zombie && (pid == -1 || pid as usize == p.getpid());
+            drop(inner);
+            return flag;
+            // ++++ release child PCB
+        });
+        if let Some((idx, _)) = pair {
+            let child = inner.children.remove(idx);
+            // confirm that child will be deallocated after being removed from children list
+            assert_eq!(Arc::strong_count(&child), 1);
+            let found_pid = child.getpid();
+            // ++++ temporarily access child PCB exclusively
+            let exit_code = child.inner_exclusive_access(file!(), line!()).exit_code;
+            // ++++ release child PCB
+            *translated_refmut(inner.memory_set.token(), exit_code_ptr) = exit_code;
+            return found_pid as isize;
+        } else {
+            drop(inner);
+            drop(process);
+            return -2;
+        }
     }
     // ---- release current PCB automatically
 }
@@ -106,7 +115,7 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
 pub fn sys_kill(pid: usize, signal: u32) -> isize {
     if let Some(process) = pid2process(pid) {
         if let Some(flag) = SignalFlags::from_bits(signal) {
-            process.inner_exclusive_access().signals |= flag;
+            process.inner_exclusive_access(file!(), line!()).signals |= flag;
             0
         } else {
             -1

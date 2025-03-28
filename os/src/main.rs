@@ -75,7 +75,7 @@ pub fn rust_main() -> ! {
     fs::list_apps();
     task::boot_screen();
     task::add_initproc();
-    *DEV_NON_BLOCKING_ACCESS.exclusive_access() = true;
+    *DEV_NON_BLOCKING_ACCESS.exclusive_access(file!(), line!()) = true;
     task::run_tasks();
     panic!("Unreachable in rust_main!");
 }

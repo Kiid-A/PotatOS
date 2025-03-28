@@ -11,7 +11,7 @@ pub fn sys_thread_create(entry: usize, arg: usize) -> isize {
     // create a new thread
     let new_task = Arc::new(TaskControlBlock::new(
         Arc::clone(&process),
-        task.inner_exclusive_access()
+        task.inner_exclusive_access(file!(), line!())
             .res
             .as_ref()
             .unwrap()
@@ -20,10 +20,10 @@ pub fn sys_thread_create(entry: usize, arg: usize) -> isize {
     ));
     // add new task to scheduler
     add_task(Arc::clone(&new_task));
-    let new_task_inner = new_task.inner_exclusive_access();
+    let new_task_inner = new_task.inner_exclusive_access(file!(), line!());
     let new_task_res = new_task_inner.res.as_ref().unwrap();
     let new_task_tid = new_task_res.tid;
-    let mut process_inner = process.inner_exclusive_access();
+    let mut process_inner = process.inner_exclusive_access(file!(), line!());
     // add new thread to current process
     let tasks = &mut process_inner.tasks;
     while tasks.len() < new_task_tid + 1 {
@@ -45,7 +45,7 @@ pub fn sys_thread_create(entry: usize, arg: usize) -> isize {
 pub fn sys_gettid() -> isize {
     current_task()
         .unwrap()
-        .inner_exclusive_access()
+        .inner_exclusive_access(file!(), line!())
         .res
         .as_ref()
         .unwrap()
@@ -58,8 +58,8 @@ pub fn sys_gettid() -> isize {
 pub fn sys_waittid(tid: usize) -> i32 {
     let task = current_task().unwrap();
     let process = task.process.upgrade().unwrap();
-    let task_inner = task.inner_exclusive_access();
-    let mut process_inner = process.inner_exclusive_access();
+    let task_inner = task.inner_exclusive_access(file!(), line!());
+    let mut process_inner = process.inner_exclusive_access(file!(), line!());
     // a thread cannot wait for itself
     if task_inner.res.as_ref().unwrap().tid == tid {
         return -1;
@@ -67,7 +67,7 @@ pub fn sys_waittid(tid: usize) -> i32 {
     let mut exit_code: Option<i32> = None;
     let waited_task = process_inner.tasks[tid].as_ref();
     if let Some(waited_task) = waited_task {
-        if let Some(waited_exit_code) = waited_task.inner_exclusive_access().exit_code {
+        if let Some(waited_exit_code) = waited_task.inner_exclusive_access(file!(), line!()).exit_code {
             exit_code = Some(waited_exit_code);
         }
     } else {

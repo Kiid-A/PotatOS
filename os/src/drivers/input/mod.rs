@@ -47,12 +47,12 @@ impl VirtIOInputWrapper {
 
 impl InputDevice for VirtIOInputWrapper {
     fn is_empty(&self) -> bool {
-        self.inner.exclusive_access().events.is_empty()
+        self.inner.exclusive_access(file!(), line!()).events.is_empty()
     }
 
     fn read_event(&self) -> u64 {
         loop {
-            let mut inner = self.inner.exclusive_access();
+            let mut inner = self.inner.exclusive_access(file!(), line!());
             if let Some(event) = inner.events.pop_front() {
                 return event;
             } else {

@@ -19,7 +19,7 @@ impl Hal for VirtioHal {
         let trakcers = frame_alloc_more(pages);
         let ppn_base = trakcers.as_ref().unwrap().last().unwrap().ppn;
         QUEUE_FRAMES
-            .exclusive_access()
+            .exclusive_access(file!(), line!())
             .append(&mut trakcers.unwrap());
         let pa: PhysAddr = ppn_base.into();
         pa.0

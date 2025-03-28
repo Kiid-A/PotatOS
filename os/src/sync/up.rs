@@ -1,6 +1,8 @@
 use core::cell::{RefCell, RefMut, UnsafeCell};
 use core::ops::{Deref, DerefMut};
+use alloc::borrow;
 use lazy_static::*;
+use log::info;
 use riscv::register::sstatus;
 
 /*
@@ -106,16 +108,25 @@ impl<T> UPIntrFreeCell<T> {
     }
 
     /// Panic if the data has been borrowed.
-    pub fn exclusive_access(&self) -> UPIntrRefMut<'_, T> {
+    pub fn exclusive_access(&self, file: &'static str, line: u32) -> UPIntrRefMut<'_, T> {
+        // UPIntrRefMut(Some(self.inner.borrow_mut()))
         INTR_MASKING_INFO.get_mut().enter();
-        UPIntrRefMut(Some(self.inner.borrow_mut()))
+        match self.inner.try_borrow_mut() {
+            Ok(borrow) => UPIntrRefMut(Some(borrow)),
+            Err(_) => {
+                panic!(
+                    "exclusive_access called while data is borrowed at {}:{}",
+                    file, line
+                );
+            }
+        }
     }
 
     pub fn exclusive_session<F, V>(&self, f: F) -> V
     where
         F: FnOnce(&mut T) -> V,
     {
-        let mut inner = self.exclusive_access();
+        let mut inner = self.exclusive_access(file!(), line!());
         f(inner.deref_mut())
     }
 }

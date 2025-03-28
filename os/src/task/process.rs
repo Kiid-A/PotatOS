@@ -70,8 +70,8 @@ impl ProcessControlBlockInner {
 }
 
 impl ProcessControlBlock {
-    pub fn inner_exclusive_access(&self) -> UPIntrRefMut<'_, ProcessControlBlockInner> {
-        self.inner.exclusive_access()
+    pub fn inner_exclusive_access(&self, file: &'static str, line: u32,) -> UPIntrRefMut<'_, ProcessControlBlockInner> {
+        self.inner.exclusive_access(file, line)
     }
 
     pub fn new(elf_data: &[u8], inode: Arc<Inode>) -> Arc<Self> {
@@ -114,7 +114,7 @@ impl ProcessControlBlock {
             true,
         ));
         // prepare trap_cx of main thread
-        let task_inner = task.inner_exclusive_access();
+        let task_inner = task.inner_exclusive_access(file!(), line!());
         let trap_cx = task_inner.get_trap_cx();
         let ustack_top = task_inner.res.as_ref().unwrap().ustack_top();
         let kstack_top = task.kstack.get_top();
@@ -122,12 +122,12 @@ impl ProcessControlBlock {
         *trap_cx = TrapContext::app_init_context(
             entry_point,
             ustack_top,
-            KERNEL_SPACE.exclusive_access().token(),
+            KERNEL_SPACE.exclusive_access(file!(), line!()).token(),
             kstack_top,
             trap_handler as usize,
         );
         // add main thread to the process
-        let mut process_inner = process.inner_exclusive_access();
+        let mut process_inner = process.inner_exclusive_access(file!(), line!());
         process_inner.tasks.push(Some(Arc::clone(&task)));
         drop(process_inner);
         insert_into_pid2process(process.getpid(), Arc::clone(&process));
@@ -138,16 +138,16 @@ impl ProcessControlBlock {
 
     /// Only support processes with a single thread.
     pub fn exec(self: &Arc<Self>, elf_data: &[u8], args: Vec<String>) {
-        assert_eq!(self.inner_exclusive_access().thread_count(), 1);
+        assert_eq!(self.inner_exclusive_access(file!(), line!()).thread_count(), 1);
         // memory_set with elf program headers/trampoline/trap context/user stack
         let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
         let new_token = memory_set.token();
         // substitute memory_set
-        self.inner_exclusive_access().memory_set = memory_set;
+        self.inner_exclusive_access(file!(), line!()).memory_set = memory_set;
         // then we alloc user resource for main thread again
         // since memory_set has been changed
-        let task = self.inner_exclusive_access().get_task(0);
-        let mut task_inner = task.inner_exclusive_access();
+        let task = self.inner_exclusive_access(file!(), line!()).get_task(0);
+        let mut task_inner = task.inner_exclusive_access(file!(), line!());
         task_inner.res.as_mut().unwrap().ustack_base = ustack_base;
         task_inner.res.as_mut().unwrap().alloc_user_res();
         task_inner.trap_cx_ppn = task_inner.res.as_mut().unwrap().trap_cx_ppn();
@@ -180,7 +180,7 @@ impl ProcessControlBlock {
         let mut trap_cx = TrapContext::app_init_context(
             entry_point,
             user_sp,
-            KERNEL_SPACE.exclusive_access().token(),
+            KERNEL_SPACE.exclusive_access(file!(), line!()).token(),
             task.kstack.get_top(),
             trap_handler as usize,
         );
@@ -191,7 +191,7 @@ impl ProcessControlBlock {
 
     /// Only support processes with a single thread.
     pub fn fork(self: &Arc<Self>) -> Arc<Self> {
-        let mut parent = self.inner_exclusive_access();
+        let mut parent = self.inner_exclusive_access(file!(), line!());
         assert_eq!(parent.thread_count(), 1);
         // clone parent's memory_set completely including trampoline/ustacks/trap_cxs
         let memory_set = MemorySet::from_existed_user(&parent.memory_set);
@@ -235,7 +235,7 @@ impl ProcessControlBlock {
             Arc::clone(&child),
             parent
                 .get_task(0)
-                .inner_exclusive_access()
+                .inner_exclusive_access(file!(), line!())
                 .res
                 .as_ref()
                 .unwrap()
@@ -245,11 +245,11 @@ impl ProcessControlBlock {
             false,
         ));
         // attach task to child process
-        let mut child_inner = child.inner_exclusive_access();
+        let mut child_inner = child.inner_exclusive_access(file!(), line!());
         child_inner.tasks.push(Some(Arc::clone(&task)));
         drop(child_inner);
         // modify kstack_top in trap_cx of this thread
-        let task_inner = task.inner_exclusive_access();
+        let task_inner = task.inner_exclusive_access(file!(), line!());
         let trap_cx = task_inner.get_trap_cx();
         trap_cx.kernel_sp = task.kstack.get_top();
         drop(task_inner);

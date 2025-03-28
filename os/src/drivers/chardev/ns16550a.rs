@@ -150,14 +150,14 @@ impl<const BASE_ADDR: usize> NS16550a<BASE_ADDR> {
 
 impl<const BASE_ADDR: usize> CharDevice for NS16550a<BASE_ADDR> {
     fn init(&self) {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.exclusive_access(file!(), line!());
         inner.ns16550a.init();
         drop(inner);
     }
 
     fn read(&self) -> u8 {
         loop {
-            let mut inner = self.inner.exclusive_access();
+            let mut inner = self.inner.exclusive_access(file!(), line!());
             if let Some(ch) = inner.read_buffer.pop_front() {
                 return ch;
             } else {
@@ -168,7 +168,7 @@ impl<const BASE_ADDR: usize> CharDevice for NS16550a<BASE_ADDR> {
         }
     }
     fn write(&self, ch: u8) {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.exclusive_access(file!(), line!());
         inner.ns16550a.write(ch);
     }
     fn handle_irq(&self) {

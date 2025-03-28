@@ -29,7 +29,7 @@ impl OSInode {
         }
     }
     pub fn read_all(&self) -> Vec<u8> {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.exclusive_access(file!(), line!());
         let mut buffer = [0u8; 512];
         let mut v: Vec<u8> = Vec::new();
         loop {
@@ -43,7 +43,7 @@ impl OSInode {
         v
     }
     pub fn inode(&self) -> Arc<Inode> {
-        self.inner.exclusive_access().inode.clone()
+        self.inner.exclusive_access(file!(), line!()).inode.clone()
     }
 }
 
@@ -56,7 +56,7 @@ lazy_static! {
 
 pub fn list_apps() {
     println!("/**** APPS ****");
-    for app in ROOT_INODE.ls() {
+    for app in ROOT_INODE.clone().ls() {
         println!("{}", app);
     }
     println!("**************/")
@@ -87,21 +87,21 @@ impl OpenFlags {
 }
 
 // TODO: fix opendir & openfile
-pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
+pub fn open_file(cwd: Arc<Inode>, name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
     let (readable, writable) = flags.read_write();
     if flags.contains(OpenFlags::CREATE) {
-        if let Some(inode) = ROOT_INODE.find(name) {
+        if let Some(inode) = cwd.find(name) {
             // clear size
             inode.clear();
             Some(Arc::new(OSInode::new(readable, writable, inode)))
         } else {
             // create file
-            ROOT_INODE
+            cwd
                 .create_file(name)
                 .map(|inode| Arc::new(OSInode::new(readable, writable, inode)))
         }
     } else {
-        ROOT_INODE.find(name).map(|inode| {
+        cwd.find(name).map(|inode| {
             if flags.contains(OpenFlags::TRUNC) {
                 inode.clear();
             }
@@ -118,7 +118,7 @@ impl File for OSInode {
         self.writable
     }
     fn read(&self, mut buf: UserBuffer) -> usize {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.exclusive_access(file!(), line!());
         let mut total_read_size = 0usize;
         for slice in buf.buffers.iter_mut() {
             let read_size = inner.inode.read_at(inner.offset, *slice);
@@ -131,7 +131,7 @@ impl File for OSInode {
         total_read_size
     }
     fn write(&self, buf: UserBuffer) -> usize {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.inner.exclusive_access(file!(), line!());
         let mut total_write_size = 0usize;
         for slice in buf.buffers.iter() {
             let write_size = inner.inode.write_at(inner.offset, *slice);
@@ -142,7 +142,7 @@ impl File for OSInode {
         total_write_size
     }
     fn stat(&self) -> Stat {
-        let inner = self.inner.exclusive_access();
+        let inner = self.inner.exclusive_access(file!(), line!());
         let ino = inner.inode.get_ino() as u64;
         let mode = match inner.inode.get_file_type() {
             DiskInodeType::File => StatMode::FILE,

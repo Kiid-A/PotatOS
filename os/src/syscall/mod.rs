@@ -1,9 +1,11 @@
+const SYSCALL_GETCWD: usize = 17;
 const SYSCALL_DUP: usize = 24;
 const SYSCALL_CONNECT: usize = 29;
 const SYSCALL_LISTEN: usize = 30;
 const SYSCALL_ACCEPT: usize = 31;
 const SYSCALL_UNLINKAT: usize = 35;
 const SYSCALL_LINKAT: usize = 37;
+const SYSCALL_CHDIR: usize = 49;
 const SYSCALL_OPEN: usize = 56;
 const SYSCALL_CLOSE: usize = 57;
 const SYSCALL_PIPE: usize = 59;
@@ -57,6 +59,8 @@ use crate::fs::OpenFlags;
 
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {
+        SYSCALL_FSTAT => sys_fstat(args[0], args[1]),
+        SYSCALL_GETCWD => sys_getcwd(args[0] as *mut u8, args[1]),
         SYSCALL_DUP => sys_dup(args[0]),
         SYSCALL_CONNECT => sys_connect(args[0] as _, args[1] as _, args[2] as _),
         SYSCALL_LISTEN => sys_listen(args[0] as _),
@@ -68,7 +72,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_PIPE => sys_pipe(args[0] as *mut usize),
         SYSCALL_READ => sys_read(args[0], args[1] as *const u8, args[2]),
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
-        SYSCALL_FSTAT => sys_fstat(args[0], args[1]),
+        SYSCALL_CHDIR => sys_chdir(args[0] as *const u8),
         SYSCALL_MKDIR => sys_mkdir(args[0] as *const u8),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
         SYSCALL_SLEEP => sys_sleep(args[0]),
@@ -95,7 +99,6 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_FRAMEBUFFER_FLUSH => sys_framebuffer_flush(),
         SYSCALL_EVENT_GET => sys_event_get(),
         SYSCALL_KEY_PRESSED => sys_key_pressed(),
-        SYSCALL_GET_CWD => sys_get_cwd(args[0] as *mut u8, args[1]),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

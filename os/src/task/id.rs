@@ -51,12 +51,12 @@ pub const IDLE_PID: usize = 0;
 pub struct PidHandle(pub usize);
 
 pub fn pid_alloc() -> PidHandle {
-    PidHandle(PID_ALLOCATOR.exclusive_access().alloc())
+    PidHandle(PID_ALLOCATOR.exclusive_access(file!(), line!()).alloc())
 }
 
 impl Drop for PidHandle {
     fn drop(&mut self) {
-        PID_ALLOCATOR.exclusive_access().dealloc(self.0);
+        PID_ALLOCATOR.exclusive_access(file!(), line!()).dealloc(self.0);
     }
 }
 
@@ -70,9 +70,9 @@ pub fn kernel_stack_position(kstack_id: usize) -> (usize, usize) {
 pub struct KernelStack(pub usize);
 
 pub fn kstack_alloc() -> KernelStack {
-    let kstack_id = KSTACK_ALLOCATOR.exclusive_access().alloc();
+    let kstack_id = KSTACK_ALLOCATOR.exclusive_access(file!(), line!()).alloc();
     let (kstack_bottom, kstack_top) = kernel_stack_position(kstack_id);
-    KERNEL_SPACE.exclusive_access().insert_framed_area(
+    KERNEL_SPACE.exclusive_access(file!(), line!()).insert_framed_area(
         kstack_bottom.into(),
         kstack_top.into(),
         MapPermission::R | MapPermission::W,
@@ -85,9 +85,9 @@ impl Drop for KernelStack {
         let (kernel_stack_bottom, _) = kernel_stack_position(self.0);
         let kernel_stack_bottom_va: VirtAddr = kernel_stack_bottom.into();
         KERNEL_SPACE
-            .exclusive_access()
+            .exclusive_access(file!(), line!())
             .remove_area_with_start_vpn(kernel_stack_bottom_va.into());
-        KSTACK_ALLOCATOR.exclusive_access().dealloc(self.0);
+        KSTACK_ALLOCATOR.exclusive_access(file!(), line!()).dealloc(self.0);
     }
 }
 
@@ -130,7 +130,7 @@ impl TaskUserRes {
         ustack_base: usize,
         alloc_user_res: bool,
     ) -> Self {
-        let tid = process.inner_exclusive_access().alloc_tid();
+        let tid = process.inner_exclusive_access(file!(), line!()).alloc_tid();
         let task_user_res = Self {
             tid,
             ustack_base,
@@ -144,7 +144,7 @@ impl TaskUserRes {
 
     pub fn alloc_user_res(&self) {
         let process = self.process.upgrade().unwrap();
-        let mut process_inner = process.inner_exclusive_access();
+        let mut process_inner = process.inner_exclusive_access(file!(), line!());
         // alloc user stack
         let ustack_bottom = ustack_bottom_from_tid(self.ustack_base, self.tid);
         let ustack_top = ustack_bottom + USER_STACK_SIZE;
@@ -166,7 +166,7 @@ impl TaskUserRes {
     fn dealloc_user_res(&self) {
         // dealloc tid
         let process = self.process.upgrade().unwrap();
-        let mut process_inner = process.inner_exclusive_access();
+        let mut process_inner = process.inner_exclusive_access(file!(), line!());
         // dealloc ustack manually
         let ustack_bottom_va: VirtAddr = ustack_bottom_from_tid(self.ustack_base, self.tid).into();
         process_inner
@@ -185,13 +185,13 @@ impl TaskUserRes {
             .process
             .upgrade()
             .unwrap()
-            .inner_exclusive_access()
+            .inner_exclusive_access(file!(), line!())
             .alloc_tid();
     }
 
     pub fn dealloc_tid(&self) {
         let process = self.process.upgrade().unwrap();
-        let mut process_inner = process.inner_exclusive_access();
+        let mut process_inner = process.inner_exclusive_access(file!(), line!());
         process_inner.dealloc_tid(self.tid);
     }
 
@@ -201,7 +201,7 @@ impl TaskUserRes {
 
     pub fn trap_cx_ppn(&self) -> PhysPageNum {
         let process = self.process.upgrade().unwrap();
-        let process_inner = process.inner_exclusive_access();
+        let process_inner = process.inner_exclusive_access(file!(), line!());
         let trap_cx_bottom_va: VirtAddr = trap_cx_bottom_from_tid(self.tid).into();
         process_inner
             .memory_set

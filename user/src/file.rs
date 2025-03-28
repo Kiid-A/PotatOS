@@ -29,8 +29,12 @@ pub fn write(fd: usize, buf: &[u8]) -> isize {
     sys_write(fd, buf)
 }
 
-pub fn get_cwd(buf: &mut [u8]) -> isize {
-    sys_get_cwd(buf, buf.len())
+pub fn getcwd(buf: &mut [u8]) -> isize {
+    sys_getcwd(buf, buf.len())
+}
+
+pub fn chdir(path: &str) -> isize {
+    sys_chdir(path)
 }
 
 pub fn mkdir(path: &str) -> isize {

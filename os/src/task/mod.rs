@@ -32,7 +32,7 @@ pub fn suspend_current_and_run_next() {
     let task = take_current_task().unwrap();
 
     // ---- access current TCB exclusively
-    let mut task_inner = task.inner_exclusive_access();
+    let mut task_inner = task.inner_exclusive_access(file!(), line!());
     let task_cx_ptr = &mut task_inner.task_cx as *mut TaskContext;
     // Change status to Ready
     task_inner.task_status = TaskStatus::Ready;
@@ -48,7 +48,7 @@ pub fn suspend_current_and_run_next() {
 /// This function must be followed by a schedule
 pub fn block_current_task() -> *mut TaskContext {
     let task = take_current_task().unwrap();
-    let mut task_inner = task.inner_exclusive_access();
+    let mut task_inner = task.inner_exclusive_access(file!(), line!());
     task_inner.task_status = TaskStatus::Blocked;
     &mut task_inner.task_cx as *mut TaskContext
 }
@@ -61,7 +61,7 @@ pub fn block_current_and_run_next() {
 /// Exit the current 'Running' task and run the next task in task list.
 pub fn exit_current_and_run_next(exit_code: i32) {
     let task = take_current_task().unwrap();
-    let mut task_inner = task.inner_exclusive_access();
+    let mut task_inner = task.inner_exclusive_access(file!(), line!());
     let process = task.process.upgrade().unwrap();
     let tid = task_inner.res.as_ref().unwrap().tid;
     // record exit code
@@ -89,7 +89,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
             }
         }
         remove_from_pid2process(pid);
-        let mut process_inner = process.inner_exclusive_access();
+        let mut process_inner = process.inner_exclusive_access(file!(), line!());
         // mark this process as a zombie process
         process_inner.is_zombie = true;
         // record exit code of main process
@@ -97,9 +97,9 @@ pub fn exit_current_and_run_next(exit_code: i32) {
 
         {
             // move all child processes under init process
-            let mut initproc_inner = INITPROC.inner_exclusive_access();
+            let mut initproc_inner = INITPROC.inner_exclusive_access(file!(), line!());
             for child in process_inner.children.iter() {
-                child.inner_exclusive_access().parent = Some(Arc::downgrade(&INITPROC));
+                child.inner_exclusive_access(file!(), line!()).parent = Some(Arc::downgrade(&INITPROC));
                 initproc_inner.children.push(child.clone());
             }
         }
@@ -110,7 +110,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
         let mut recycle_res = Vec::<TaskUserRes>::new();
         for task in process_inner.tasks.iter().filter(|t| t.is_some()) {
             let task = task.as_ref().unwrap();
-            let mut task_inner = task.inner_exclusive_access();
+            let mut task_inner = task.inner_exclusive_access(file!(), line!());
             if let Some(res) = task_inner.res.take() {
                 recycle_res.push(res);
             }
@@ -121,7 +121,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
         drop(process_inner);
         recycle_res.clear();
 
-        let mut process_inner = process.inner_exclusive_access();
+        let mut process_inner = process.inner_exclusive_access(file!(), line!());
         process_inner.children.clear();
         // deallocate other data in user space i.e. program code/data section
         process_inner.memory_set.recycle_data_pages();
@@ -143,7 +143,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
 
 lazy_static! {
     pub static ref INITPROC: Arc<ProcessControlBlock> = {
-        let inode = open_file("initproc", OpenFlags::RDONLY).unwrap();
+        let inode = open_file(ROOT_INODE.clone(), "initproc", OpenFlags::RDONLY).unwrap();
         let v = inode.read_all();
         ProcessControlBlock::new(v.as_slice(), ROOT_INODE.clone())
     };
@@ -188,12 +188,12 @@ pub fn boot_screen() {
 
 pub fn check_signals_of_current() -> Option<(i32, &'static str)> {
     let process = current_process();
-    let process_inner = process.inner_exclusive_access();
+    let process_inner = process.inner_exclusive_access(file!(), line!());
     process_inner.signals.check_error()
 }
 
 pub fn current_add_signal(signal: SignalFlags) {
     let process = current_process();
-    let mut process_inner = process.inner_exclusive_access();
+    let mut process_inner = process.inner_exclusive_access(file!(), line!());
     process_inner.signals |= signal;
 }

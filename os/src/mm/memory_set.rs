@@ -30,7 +30,7 @@ lazy_static! {
 }
 
 pub fn kernel_token() -> usize {
-    KERNEL_SPACE.exclusive_access().token()
+    KERNEL_SPACE.exclusive_access(file!(), line!()).token()
 }
 
 pub struct MemorySet {
@@ -370,7 +370,7 @@ bitflags! {
 
 #[allow(unused)]
 pub fn remap_test() {
-    let mut kernel_space = KERNEL_SPACE.exclusive_access();
+    let mut kernel_space = KERNEL_SPACE.exclusive_access(file!(), line!());
     let mid_text: VirtAddr = ((stext as usize + etext as usize) / 2).into();
     let mid_rodata: VirtAddr = ((srodata as usize + erodata as usize) / 2).into();
     let mid_data: VirtAddr = ((sdata as usize + edata as usize) / 2).into();

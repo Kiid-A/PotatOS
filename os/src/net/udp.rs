@@ -62,7 +62,7 @@ impl File for UDP {
     }
 
     fn write(&self, buf: crate::mm::UserBuffer) -> usize {
-        let lose_net_stack = LOSE_NET_STACK.0.exclusive_access();
+        let lose_net_stack = LOSE_NET_STACK.0.exclusive_access(file!(), line!());
 
         let mut data = vec![0u8; buf.len()];
 

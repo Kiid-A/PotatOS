@@ -1,13 +1,17 @@
+use crate::block_cache;
+
 use super::{
     block_cache_sync_all, get_block_cache, BlockDevice, DirEntry, DiskInode, DiskInodeType,
     EasyFileSystem, DIRENT_SZ,
 };
-use alloc::string::String;
+use alloc::format;
+use alloc::string::{String, ToString};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use spin::{Mutex, MutexGuard};
 
 pub struct Inode {
+    name: String,
     block_id: usize,
     block_offset: usize,
     fs: Arc<Mutex<EasyFileSystem>>,
@@ -18,6 +22,7 @@ pub struct Inode {
 impl Inode {
     /// We should not acquire efs lock here.
     pub fn new(
+        name: String,
         block_id: u32,
         block_offset: usize,
         fs: Arc<Mutex<EasyFileSystem>>,
@@ -25,6 +30,7 @@ impl Inode {
         inode_id: u32,
     ) -> Self {
         Self {
+            name: name,
             block_id: block_id as usize,
             block_offset,
             fs,
@@ -35,18 +41,25 @@ impl Inode {
     pub fn get_inode_id(&self) -> u32 {
         self.inode_id
     }
-    #[allow(unused)]
-    fn self_dirent(&self) -> Arc<DirEntry> {
-        let mut dirent = DirEntry::empty();
-        self.read_disk_inode(|disk_inode| disk_inode.read_at(0, dirent.as_bytes_mut(), &self.block_device));
-        Arc::new(dirent)
+
+    pub fn get_cwd(&self) -> &str {
+        &self.name
+        // unimplemented!()
     }
 
-    #[allow(unused)]
-    fn parent_dirent(&self) -> Arc<DirEntry> {
-        let mut dirent = DirEntry::empty();
-        self.read_at(DIRENT_SZ, dirent.as_bytes_mut());
-        Arc::new(dirent)
+    pub fn find_dir_entries(&self) -> Vec<DirEntry> {
+        let mut dir_entries = Vec::new();
+        self.read_disk_inode(|disk_inode| {
+            if disk_inode.is_dir() {
+                let file_count = (disk_inode.size as usize) / DIRENT_SZ;
+                for i in 0..file_count {
+                    let mut dirent = DirEntry::empty();
+                    disk_inode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device);
+                    dir_entries.push(dirent);
+                }
+            }
+        });
+        dir_entries
     }
 
     fn read_disk_inode<V>(&self, f: impl FnOnce(&DiskInode) -> V) -> V {
@@ -83,6 +96,8 @@ impl Inode {
         let mut block_id = self.block_id as u32;
         let mut block_offset = self.block_offset;
         let mut new_inode_id = 0;
+        let mut real_name = String::new();
+
         // cut path and find inode. if inode is a file during the process, return None
         for name in path.split('/').filter(|s| !s.is_empty()) {
             let inode_id = get_block_cache(block_id as usize, self.block_device.clone())
@@ -91,6 +106,7 @@ impl Inode {
                     if disk_inode.is_file() {
                         return None;
                     }
+                    real_name = name.to_string().clone();
                     self.find_inode_id(name, disk_inode)
                 });
             if inode_id.is_none() {
@@ -102,6 +118,7 @@ impl Inode {
         }
         // finally get it
         Some(Arc::new(Self::new(
+            real_name,
             block_id, 
             block_offset, 
             self.fs.clone(), 
@@ -154,7 +171,6 @@ impl Inode {
         let new_inode_id = fs.alloc_inode();
         // initialize inode
         let (new_inode_block_id, new_inode_block_offset) = fs.get_disk_inode_pos(new_inode_id);
-        let self_inode_id = self.self_dirent().inode_number();
         // insert inode into cache as required
         get_block_cache(new_inode_block_id as usize, Arc::clone(&self.block_device))
             .lock()
@@ -163,7 +179,7 @@ impl Inode {
                 if inode_type == DiskInodeType::Directory {
                     // read '.' is read self
                     self.increase_size((DIRENT_SZ * 2) as u32, new_inode, &mut fs);
-                    let dirent_parent = DirEntry::new("..", self_inode_id);
+                    let dirent_parent = DirEntry::new("..", self.inode_id.clone());
                     let dirent_self = DirEntry::new(".", new_inode_id);
                     new_inode.write_at(0, dirent_self.as_bytes(), &self.block_device);
                     new_inode.write_at(DIRENT_SZ, dirent_parent.as_bytes(), &self.block_device);
@@ -188,6 +204,7 @@ impl Inode {
         block_cache_sync_all();
         // return inode
         Some(Arc::new(Self::new(
+            name.to_string(),
             block_id,
             block_offset,
             self.fs.clone(),

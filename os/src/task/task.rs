@@ -16,13 +16,13 @@ pub struct TaskControlBlock {
 }
 
 impl TaskControlBlock {
-    pub fn inner_exclusive_access(&self) -> UPIntrRefMut<'_, TaskControlBlockInner> {
-        self.inner.exclusive_access()
+    pub fn inner_exclusive_access(&self, file: &'static str, line: u32,) -> UPIntrRefMut<'_, TaskControlBlockInner> {
+        self.inner.exclusive_access(file, line)
     }
 
     pub fn get_user_token(&self) -> usize {
         let process = self.process.upgrade().unwrap();
-        let inner = process.inner_exclusive_access();
+        let inner = process.inner_exclusive_access(file!(), line!());
         inner.memory_set.token()
     }
 }

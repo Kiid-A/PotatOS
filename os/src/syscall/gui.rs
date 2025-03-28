@@ -15,7 +15,7 @@ pub fn sys_framebuffer() -> isize {
     let pn_offset = fb_start_ppn.0 as isize - fb_start_vpn.0 as isize;
 
     let current_process = current_process();
-    let mut inner = current_process.inner_exclusive_access();
+    let mut inner = current_process.inner_exclusive_access(file!(), line!());
     inner.memory_set.push(
         MapArea::new(
             (FB_VADDR as usize).into(),

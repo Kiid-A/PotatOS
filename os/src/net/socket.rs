@@ -22,7 +22,7 @@ lazy_static! {
 
 /// get the seq and ack by socket index
 pub fn get_s_a_by_index(index: usize) -> Option<(u32, u32)> {
-    let socket_table = SOCKET_TABLE.exclusive_access();
+    let socket_table = SOCKET_TABLE.exclusive_access(file!(), line!());
 
     assert!(index < socket_table.len());
 
@@ -33,7 +33,7 @@ pub fn get_s_a_by_index(index: usize) -> Option<(u32, u32)> {
 }
 
 pub fn set_s_a_by_index(index: usize, seq: u32, ack: u32) {
-    let mut socket_table = SOCKET_TABLE.exclusive_access();
+    let mut socket_table = SOCKET_TABLE.exclusive_access(file!(), line!());
 
     assert!(socket_table.len() > index);
     assert!(socket_table[index].is_some());
@@ -45,7 +45,7 @@ pub fn set_s_a_by_index(index: usize, seq: u32, ack: u32) {
 }
 
 pub fn get_socket(raddr: IPv4, lport: u16, rport: u16) -> Option<usize> {
-    let socket_table = SOCKET_TABLE.exclusive_access();
+    let socket_table = SOCKET_TABLE.exclusive_access(file!(), line!());
     for i in 0..socket_table.len() {
         let sock = &socket_table[i];
         if sock.is_none() {
@@ -65,7 +65,7 @@ pub fn add_socket(raddr: IPv4, lport: u16, rport: u16) -> Option<usize> {
         return None;
     }
 
-    let mut socket_table = SOCKET_TABLE.exclusive_access();
+    let mut socket_table = SOCKET_TABLE.exclusive_access(file!(), line!());
     let mut index = usize::MAX;
     for i in 0..socket_table.len() {
         if socket_table[i].is_none() {
@@ -93,7 +93,7 @@ pub fn add_socket(raddr: IPv4, lport: u16, rport: u16) -> Option<usize> {
 }
 
 pub fn remove_socket(index: usize) {
-    let mut socket_table = SOCKET_TABLE.exclusive_access();
+    let mut socket_table = SOCKET_TABLE.exclusive_access(file!(), line!());
 
     assert!(socket_table.len() > index);
 
@@ -101,7 +101,7 @@ pub fn remove_socket(index: usize) {
 }
 
 pub fn push_data(index: usize, data: Vec<u8>) {
-    let mut socket_table = SOCKET_TABLE.exclusive_access();
+    let mut socket_table = SOCKET_TABLE.exclusive_access(file!(), line!());
 
     assert!(socket_table.len() > index);
     assert!(socket_table[index].is_some());
@@ -114,7 +114,7 @@ pub fn push_data(index: usize, data: Vec<u8>) {
 }
 
 pub fn pop_data(index: usize) -> Option<Vec<u8>> {
-    let mut socket_table = SOCKET_TABLE.exclusive_access();
+    let mut socket_table = SOCKET_TABLE.exclusive_access(file!(), line!());
 
     assert!(socket_table.len() > index);
     assert!(socket_table[index].is_some());

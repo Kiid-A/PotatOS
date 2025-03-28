@@ -16,7 +16,7 @@ pub struct VirtIOBlock {
 
 impl BlockDevice for VirtIOBlock {
     fn read_block(&self, block_id: usize, buf: &mut [u8]) {
-        let nb = *DEV_NON_BLOCKING_ACCESS.exclusive_access();
+        let nb = *DEV_NON_BLOCKING_ACCESS.exclusive_access(file!(), line!());
         if nb {
             let mut resp = BlkResp::default();
             let task_cx_ptr = self.virtio_blk.exclusive_session(|blk| {
@@ -31,13 +31,13 @@ impl BlockDevice for VirtIOBlock {
             );
         } else {
             self.virtio_blk
-                .exclusive_access()
+                .exclusive_access(file!(), line!())
                 .read_block(block_id, buf)
                 .expect("Error when reading VirtIOBlk");
         }
     }
     fn write_block(&self, block_id: usize, buf: &[u8]) {
-        let nb = *DEV_NON_BLOCKING_ACCESS.exclusive_access();
+        let nb = *DEV_NON_BLOCKING_ACCESS.exclusive_access(file!(), line!());
         if nb {
             let mut resp = BlkResp::default();
             let task_cx_ptr = self.virtio_blk.exclusive_session(|blk| {
@@ -52,7 +52,7 @@ impl BlockDevice for VirtIOBlock {
             );
         } else {
             self.virtio_blk
-                .exclusive_access()
+                .exclusive_access(file!(), line!())
                 .write_block(block_id, buf)
                 .expect("Error when writing VirtIOBlk");
         }
@@ -74,7 +74,7 @@ impl VirtIOBlock {
             )
         };
         let mut condvars = BTreeMap::new();
-        let channels = virtio_blk.exclusive_access().virt_queue_size();
+        let channels = virtio_blk.exclusive_access(file!(), line!()).virt_queue_size();
         for i in 0..channels {
             let condvar = Condvar::new();
             condvars.insert(i, condvar);

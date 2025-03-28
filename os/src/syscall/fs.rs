@@ -1,10 +1,13 @@
+use core::cmp::min;
 use core::mem::size_of;
+use core::{clone, ptr};
 
-use crate::fs::{make_pipe, open_file, OpenFlags, Stat};
-use crate::mm::{translated_byte_buffer, translated_refmut, translated_str, UserBuffer};
+use crate::fs::{make_pipe, open_file, OpenFlags, Stat, ROOT_INODE};
+use crate::mm::{translated_byte_buffer, translated_ref, translated_refmut, translated_str, UserBuffer};
 use crate::task::{current_process, current_user_token};
 use alloc::string::String;
 use alloc::sync::Arc;
+use easy_fs::Inode;
 use log::info;
 
 use super::process;
@@ -12,7 +15,7 @@ use super::process;
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let token = current_user_token();
     let process = current_process();
-    let inner = process.inner_exclusive_access();
+    let inner = process.inner_exclusive_access(file!(), line!());
     if fd >= inner.fd_table.len() {
         return -1;
     }
@@ -32,7 +35,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 pub fn sys_read(fd: usize, buf: *const u8, len: usize) -> isize {
     let token = current_user_token();
     let process = current_process();
-    let inner = process.inner_exclusive_access();
+    let inner = process.inner_exclusive_access(file!(), line!());
     if fd >= inner.fd_table.len() {
         return -1;
     }
@@ -53,8 +56,11 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
     let process = current_process();
     let token = current_user_token();
     let path = translated_str(token, path);
-    if let Some(inode) = open_file(path.as_str(), OpenFlags::from_bits(flags).unwrap()) {
-        let mut inner = process.inner_exclusive_access();
+    let inner = process.inner_exclusive_access(file!(), line!());
+    let cwd = inner.cwd.clone();
+    drop(inner);
+    if let Some(inode) = open_file(cwd.clone(), path.as_str(), OpenFlags::from_bits(flags).unwrap()) {
+        let mut inner = process.inner_exclusive_access(file!(), line!());
         let fd = inner.alloc_fd();
         inner.fd_table[fd] = Some(inode);
         fd as isize
@@ -65,7 +71,7 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 
 pub fn sys_close(fd: usize) -> isize {
     let process = current_process();
-    let mut inner = process.inner_exclusive_access();
+    let mut inner = process.inner_exclusive_access(file!(), line!());
     if fd >= inner.fd_table.len() {
         return -1;
     }
@@ -79,7 +85,7 @@ pub fn sys_close(fd: usize) -> isize {
 pub fn sys_pipe(pipe: *mut usize) -> isize {
     let process = current_process();
     let token = current_user_token();
-    let mut inner = process.inner_exclusive_access();
+    let mut inner = process.inner_exclusive_access(file!(), line!());
     let (pipe_read, pipe_write) = make_pipe();
     let read_fd = inner.alloc_fd();
     inner.fd_table[read_fd] = Some(pipe_read);
@@ -92,7 +98,7 @@ pub fn sys_pipe(pipe: *mut usize) -> isize {
 
 pub fn sys_dup(fd: usize) -> isize {
     let process = current_process();
-    let mut inner = process.inner_exclusive_access();
+    let mut inner = process.inner_exclusive_access(file!(), line!());
     if fd >= inner.fd_table.len() {
         return -1;
     }
@@ -104,35 +110,38 @@ pub fn sys_dup(fd: usize) -> isize {
     new_fd as isize
 }
 
-pub fn sys_get_cwd(buf: *mut u8, len: usize) -> isize {
-    0
-    // let process = current_process();
-    // let inner = process.inner_exclusive_access();
-    // let cwd = inner.cwd.clone();
-    // let path = cwd.get_cwd();
-    // let bytes = path.as_bytes();
-    
-    // if len < bytes.len() {
-    //     return -1;
-    // }
-
-    // unsafe {
-    //     let len = len.min(bytes.len());
-    //     core::ptr::copy_nonoverlapping(bytes.as_ptr(), buf, len);
-    // }
-
-    // len as isize
+pub fn sys_getcwd(buf: *mut u8, len: usize) -> isize {
+    let process = current_process();
+    info!("pid: {}", process.pid.0);
+    let token = current_user_token(); 
+    let mut v = translated_byte_buffer(token, buf, len);
+    let inner = process.inner_exclusive_access(file!(), line!());
+    let wd = inner.cwd.clone();
+    let cwd = wd.get_cwd();
+    if cwd.len() + 1 > len {
+        return -1;
+    }
+    unsafe {
+        let mut p = cwd.as_bytes().as_ptr();
+        for slice in v.iter_mut() {
+            let len = slice.len();
+            ptr::copy_nonoverlapping(p, slice.as_mut_ptr(), len);
+            p = p.add(len);
+        }
+    }
+    cwd.len() as isize
 }
 
 pub fn sys_mkdir(pathname: *const u8) -> isize {
     let process = current_process();
+    info!("pid: {}", process.pid.0);
     let token = current_user_token();
     let path = translated_str(token, pathname);
-    let inner = process.inner_exclusive_access();
+    let inner = process.inner_exclusive_access(file!(), line!());
     let cwd = inner.cwd.clone();
-    // drop(inner);
+    drop(inner);
     info!("cwd inode number: {}", cwd.get_inode_id());
-    let dir = cwd.create_dir(&path);
+    let dir = cwd.create_dir(&path).clone();
     if dir.is_none() {
         return -1;
     }
@@ -143,16 +152,19 @@ pub fn sys_fstat(fd: usize, st_addr: usize) -> isize {
     let process = current_process();
     let token = current_user_token();
     let stat = translated_refmut(token, st_addr as *mut Stat);
-    let inner = process.inner_exclusive_access();
-    match inner.fd_table[fd] {
-        Some(ref osinode) => {
+    let inner = process.inner_exclusive_access(file!(), line!());
+    match inner.fd_table[fd].clone() {
+        Some(osinode) => {
+            // *stat = osinode.stat();
             let new_st = osinode.stat();
+            drop(inner);
             stat.ino = new_st.ino;
             stat.mode = new_st.mode;
             stat.nlink = new_st.nlink;
             return 0;
         }
         None => {
+            drop(inner);
             return -1;
         }
     }
@@ -164,7 +176,7 @@ pub fn sys_linkat(old_path_ptr: *const u8, new_path_ptr: *const u8) -> isize {
     let token = current_user_token();
     let old_path = translated_str(token, old_path_ptr);
     let new_path = translated_str(token, new_path_ptr);
-    let inner = process.inner_exclusive_access();
+    let inner = process.inner_exclusive_access(file!(), line!());
     let cwd = inner.cwd.clone();
     cwd.linkat(&old_path, &new_path)
 }
@@ -173,7 +185,39 @@ pub fn sys_unlinkat(path_ptr: *const u8) -> isize {
     let process = current_process();
     let token = current_user_token();
     let path = translated_str(token, path_ptr);
-    let inner = process.inner_exclusive_access();
+    let inner = process.inner_exclusive_access(file!(), line!());
     let cwd = inner.cwd.clone();
     cwd.unlinkat(&path) 
+}
+
+pub fn sys_chdir(path_ptr: *const u8) -> isize {
+    let process = current_process();
+    info!("pid: {}", process.pid.0);
+    let token = current_user_token();
+    let path = translated_str(token, path_ptr);
+    let mut inner = process.inner_exclusive_access(file!(), line!());
+    let cwd = inner.cwd.clone();
+    if path == "/" {
+        let dir = ROOT_INODE.clone();
+        // inner.parent.as_mut().unwrap().upgrade().unwrap().inner_exclusive_access(file!(), line!()).cwd = dir;
+        inner.cwd = dir.clone();
+        return 0;
+    }
+    drop(inner);
+
+    let dir = if path.clone().starts_with('/') {
+        ROOT_INODE.clone().find(&path)
+    } else {
+        cwd.find(&path)
+    };
+    
+    if dir.is_some() {
+        inner = process.inner_exclusive_access(file!(), line!()); 
+        // inner.parent.as_mut().unwrap().upgrade().unwrap().inner_exclusive_access(file!(), line!()).cwd = dir.unwrap().clone();
+        inner.cwd = dir.unwrap().clone();
+    } else {
+        return -1;
+    }
+    
+    0
 }

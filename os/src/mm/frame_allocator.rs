@@ -102,7 +102,7 @@ pub fn init_frame_allocator() {
     extern "C" {
         fn ekernel();
     }
-    FRAME_ALLOCATOR.exclusive_access().init(
+    FRAME_ALLOCATOR.exclusive_access(file!(), line!()).init(
         PhysAddr::from(ekernel as usize).ceil(),
         PhysAddr::from(MEMORY_END).floor(),
     );
@@ -110,20 +110,20 @@ pub fn init_frame_allocator() {
 
 pub fn frame_alloc() -> Option<FrameTracker> {
     FRAME_ALLOCATOR
-        .exclusive_access()
+        .exclusive_access(file!(), line!())
         .alloc()
         .map(FrameTracker::new)
 }
 
 pub fn frame_alloc_more(num: usize) -> Option<Vec<FrameTracker>> {
     FRAME_ALLOCATOR
-        .exclusive_access()
+        .exclusive_access(file!(), line!())
         .alloc_more(num)
         .map(|x| x.iter().map(|&t| FrameTracker::new(t)).collect())
 }
 
 pub fn frame_dealloc(ppn: PhysPageNum) {
-    FRAME_ALLOCATOR.exclusive_access().dealloc(ppn);
+    FRAME_ALLOCATOR.exclusive_access(file!(), line!()).dealloc(ppn);
 }
 
 #[allow(unused)]
@@ -163,7 +163,7 @@ pub fn frame_allocator_alloc_more_test() {
 
 /// Check if the remaining physical memory is sufficient
 pub fn is_mem_sufficient(_len: usize) -> bool {
-    let fa = FRAME_ALLOCATOR.exclusive_access();
+    let fa = FRAME_ALLOCATOR.exclusive_access(file!(), line!());
     let page_cnt = fa.end - fa.current + fa.recycled.len();
     (_len + PAGE_SIZE - 1) / PAGE_SIZE <= page_cnt
 }

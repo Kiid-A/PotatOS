@@ -31,31 +31,31 @@ lazy_static! {
 }
 
 pub fn add_task(task: Arc<TaskControlBlock>) {
-    TASK_MANAGER.exclusive_access().add(task);
+    TASK_MANAGER.exclusive_access(file!(), line!()).add(task);
 }
 
 pub fn wakeup_task(task: Arc<TaskControlBlock>) {
-    let mut task_inner = task.inner_exclusive_access();
+    let mut task_inner = task.inner_exclusive_access(file!(), line!());
     task_inner.task_status = TaskStatus::Ready;
     drop(task_inner);
     add_task(task);
 }
 
 pub fn fetch_task() -> Option<Arc<TaskControlBlock>> {
-    TASK_MANAGER.exclusive_access().fetch()
+    TASK_MANAGER.exclusive_access(file!(), line!()).fetch()
 }
 
 pub fn pid2process(pid: usize) -> Option<Arc<ProcessControlBlock>> {
-    let map = PID2PCB.exclusive_access();
+    let map = PID2PCB.exclusive_access(file!(), line!());
     map.get(&pid).map(Arc::clone)
 }
 
 pub fn insert_into_pid2process(pid: usize, process: Arc<ProcessControlBlock>) {
-    PID2PCB.exclusive_access().insert(pid, process);
+    PID2PCB.exclusive_access(file!(), line!()).insert(pid, process);
 }
 
 pub fn remove_from_pid2process(pid: usize) {
-    let mut map = PID2PCB.exclusive_access();
+    let mut map = PID2PCB.exclusive_access(file!(), line!());
     if map.remove(&pid).is_none() {
         panic!("cannot find pid {} in pid2task!", pid);
     }

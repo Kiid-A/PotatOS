@@ -21,7 +21,7 @@ lazy_static! {
 }
 
 pub fn listen(port: u16) -> Option<usize> {
-    let mut listen_table = LISTEN_TABLE.exclusive_access();
+    let mut listen_table = LISTEN_TABLE.exclusive_access(file!(), line!());
     let mut index = usize::MAX;
     for i in 0..listen_table.len() {
         if listen_table[i].is_none() {
@@ -47,7 +47,7 @@ pub fn listen(port: u16) -> Option<usize> {
 
 // can accept request
 pub fn accept(listen_index: usize, task: Arc<TaskControlBlock>) {
-    let mut listen_table = LISTEN_TABLE.exclusive_access();
+    let mut listen_table = LISTEN_TABLE.exclusive_access(file!(), line!());
     assert!(listen_index < listen_table.len());
     let listen_port = listen_table[listen_index].as_mut();
     assert!(listen_port.is_some());
@@ -57,7 +57,7 @@ pub fn accept(listen_index: usize, task: Arc<TaskControlBlock>) {
 }
 
 pub fn port_acceptable(listen_index: usize) -> bool {
-    let mut listen_table = LISTEN_TABLE.exclusive_access();
+    let mut listen_table = LISTEN_TABLE.exclusive_access(file!(), line!());
     assert!(listen_index < listen_table.len());
 
     let listen_port = listen_table[listen_index].as_mut();
@@ -91,7 +91,7 @@ pub fn check_accept(port: u16, tcp_packet: &TCPPacket) -> Option<()> {
 
 pub fn accept_connection(_port: u16, tcp_packet: &TCPPacket, task: Arc<TaskControlBlock>) {
     let process = task.process.upgrade().unwrap();
-    let mut inner = process.inner_exclusive_access();
+    let mut inner = process.inner_exclusive_access(file!(), line!());
     let fd = inner.alloc_fd();
 
     let tcp_socket = TCP::new(
@@ -104,7 +104,7 @@ pub fn accept_connection(_port: u16, tcp_packet: &TCPPacket, task: Arc<TaskContr
 
     inner.fd_table[fd] = Some(Arc::new(tcp_socket));
 
-    let cx = task.inner_exclusive_access().get_trap_cx();
+    let cx = task.inner_exclusive_access(file!(), line!()).get_trap_cx();
     cx.x[10] = fd;
 }
 
@@ -119,7 +119,7 @@ impl PortFd {
 
 impl Drop for PortFd {
     fn drop(&mut self) {
-        LISTEN_TABLE.exclusive_access()[self.0] = None
+        LISTEN_TABLE.exclusive_access(file!(), line!())[self.0] = None
     }
 }
 

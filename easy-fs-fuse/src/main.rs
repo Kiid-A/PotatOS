@@ -202,12 +202,12 @@ fn efs_dir_test() -> std::io::Result<()> {
     root.create_file("f1");
     root.create_file("f2");
 
-    let d1 = root.create_dir("d1").unwrap();
+    let d1: Arc<Inode> = root.create_dir("d1").unwrap();
     
-    let f3 = d1.create("f3").unwrap();
+    let f3 = d1.create_file("f3").unwrap();
     let d2 = d1.create_dir("d2").unwrap();
 
-    let f4 = d2.create("f4").unwrap();
+    let f4 = d2.create_file("f4").unwrap();
     
 
     tree(&root, "/", 0);
@@ -226,6 +226,10 @@ fn efs_dir_test() -> std::io::Result<()> {
     assert!(f3.find("whatever").is_none());
     
     let apps = root.ls();
+    for app in apps {
+        println!("{}", app);
+    }
+    let apps = d1.find("..").unwrap().ls();
     for app in apps {
         println!("{}", app);
     }
