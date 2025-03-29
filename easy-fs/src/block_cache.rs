@@ -80,6 +80,7 @@ const BLOCK_CACHE_SIZE: usize = 16;
 // Mutex保证多线程下数据的安全性
 // 结合使用实现了多线程共享可变数据
 pub struct BlockCacheManager {
+    // LRU: top->least recently used, tail->recently used
     queue: VecDeque<(usize, Arc<Mutex<BlockCache>>)>,
 }
 
@@ -96,23 +97,14 @@ impl BlockCacheManager {
         block_id: usize,
         block_device: Arc<dyn BlockDevice>,
     ) -> Arc<Mutex<BlockCache>> {
-        if let Some(pair) = self.queue.iter().find(|pair| pair.0 == block_id) {
+        if let Some(index) = self.queue.iter().position(|pair| pair.0 == block_id) {
+            let pair = self.queue.remove(index).unwrap();
+            self.queue.push_back(pair.clone());
             Arc::clone(&pair.1)
         } else {
             // substitute
             if self.queue.len() == BLOCK_CACHE_SIZE {
-                // from front to tail
-                // TODO: try to use LRU algorithm here
-                if let Some((idx, _)) = self
-                    .queue
-                    .iter()
-                    .enumerate()
-                    .find(|(_, pair)| Arc::strong_count(&pair.1) == 1)
-                {
-                    self.queue.drain(idx..=idx);
-                } else {
-                    panic!("Run out of BlockCache!");
-                }
+                self.queue.pop_front();
             }
             // load block into mem and push back
             let block_cache = Arc::new(Mutex::new(BlockCache::new(

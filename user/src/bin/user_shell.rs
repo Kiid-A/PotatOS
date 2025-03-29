@@ -28,7 +28,6 @@ struct ProcessArguments {
     args_addr: Vec<*const u8>,
 }
 
-// TODO: BuiltingCommand: {chdir, mkdir, pwd, echo, exit, ...}
 fn exec_builtin_cmd(args: &Vec<String>) -> isize {
     match args[0].as_str() {
         "cd\0" => {

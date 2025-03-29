@@ -86,7 +86,6 @@ impl OpenFlags {
     }
 }
 
-// TODO: fix opendir & openfile
 pub fn open_file(cwd: Arc<Inode>, name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
     let (readable, writable) = flags.read_write();
     if flags.contains(OpenFlags::CREATE) {

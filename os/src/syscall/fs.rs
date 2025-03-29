@@ -170,7 +170,6 @@ pub fn sys_fstat(fd: usize, st_addr: usize) -> isize {
     }
 }
 
-// TODO: link path shall be absolute ones. try to update it to support relative path 
 pub fn sys_linkat(old_path_ptr: *const u8, new_path_ptr: *const u8) -> isize {
     let process = current_process();
     let token = current_user_token();
