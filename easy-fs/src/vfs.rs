@@ -47,6 +47,18 @@ impl Inode {
         // unimplemented!()
     }
 
+    pub fn is_dir(&self) -> bool {
+        return self.modify_disk_inode(|inode: &mut DiskInode| {
+            return inode.is_dir();
+        });
+    }
+
+    pub fn is_file(&self) -> bool {
+        return self.modify_disk_inode(|inode: &mut DiskInode| {
+            return inode.is_file();
+        });
+    }
+
     pub fn find_dir_entries(&self) -> Vec<DirEntry> {
         let mut dir_entries = Vec::new();
         self.read_disk_inode(|disk_inode| {

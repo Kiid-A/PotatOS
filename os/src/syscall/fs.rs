@@ -210,11 +210,12 @@ pub fn sys_chdir(path_ptr: *const u8) -> isize {
         cwd.find(&path)
     };
     
-    if dir.is_some() {
+    if dir.is_some() && dir.clone().unwrap().is_dir() {
         inner = process.inner_exclusive_access(file!(), line!()); 
         // inner.parent.as_mut().unwrap().upgrade().unwrap().inner_exclusive_access(file!(), line!()).cwd = dir.unwrap().clone();
         inner.cwd = dir.unwrap().clone();
     } else {
+        println!("{} not exist or not a directory", path);
         return -1;
     }
     
