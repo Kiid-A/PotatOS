@@ -13,6 +13,7 @@ use crate::fs::{open_file, OpenFlags, ROOT_INODE};
 use crate::sbi::shutdown;
 use alloc::{sync::Arc, vec::Vec};
 use lazy_static::*;
+use log::{info, trace};
 use manager::fetch_task;
 use process::ProcessControlBlock;
 use switch::__switch;
@@ -28,6 +29,10 @@ pub use signal::SignalFlags;
 pub use task::{TaskControlBlock, TaskStatus};
 
 pub fn suspend_current_and_run_next() {
+    // info!(
+    //     "kernel: pid[{}] suspend_current_and_run_next",
+    //     current_process().clone().pid.0
+    // );
     // There must be an application running.
     let task = take_current_task().unwrap();
 
@@ -54,12 +59,25 @@ pub fn block_current_task() -> *mut TaskContext {
 }
 
 pub fn block_current_and_run_next() {
+    // info!(
+    //     "kernel: pid[{}] block_current_and_run_next",
+    //     current_process().clone().pid.0
+    // );
     let task_cx_ptr = block_current_task();
     schedule(task_cx_ptr);
 }
 
 /// Exit the current 'Running' task and run the next task in task list.
 pub fn exit_current_and_run_next(exit_code: i32) {
+    // info!(
+    //     "kernel: pid[{}] exit_current_and_run_next",
+    //     current_process().clone().pid.0
+    // );
+    // println!(
+    //     "kernel: pid[{}] exit with exit_code {}",
+    //     current_process().clone().pid.0,
+    //     exit_code
+    // );
     let task = take_current_task().unwrap();
     let mut task_inner = task.inner_exclusive_access(file!(), line!());
     let process = task.process.upgrade().unwrap();
@@ -145,45 +163,12 @@ lazy_static! {
     pub static ref INITPROC: Arc<ProcessControlBlock> = {
         let inode = open_file(ROOT_INODE.clone(), "initproc", OpenFlags::RDONLY).unwrap();
         let v = inode.read_all();
-        ProcessControlBlock::new(v.as_slice(), ROOT_INODE.clone())
+        ProcessControlBlock::new(v.as_slice(), ROOT_INODE.clone(), "initproc")
     };
 }
 
 pub fn add_initproc() {
     let _initproc = INITPROC.clone();
-}
-
-pub fn boot_screen() {
-    let boot_screen = r#"
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    @@@@@@@@@@@@@@@@@@@#+-:.....:=*%@@@@@@@@
-    @@@@@@@@@@@@@@@@#-   :--===-:.  .+@@@@@@
-    @@@@@@@@@@@@@@%-  -+***********=:  +@@@@
-    @@@@@@@@@@@@@*  =****+--+*+++++**+: :@@@
-    @@@@@@@@@@@%-  -+==++++++**+*=-=+**: :@@
-    @@@@@@@@#=.  :==-==---=****+*+++*+**. *@
-    @@@@@@#-  :=+*+***+++++***********+=. =@
-    @@@@@-  =***************+**=-=**+=--. +@
-    @@@@: :**+==+*++***+=-=+*+*+=++=--=-  %@
-    @@@+ .**++==+*******+=--+***+=---=-  *@@
-    @@@: -**+*****+++****+=-+*+=---=-. .#@@@
-    @@@: :=+***+++=-=*+++***+=---=-.  +@@@@@
-    @@@= .--=++***+++****++=---=-.  +@@@@@@@
-    @@@@. :=---===++++===----=-.  +@@@@@@@@@
-    @@@@%: .-==-----------==-.  +@@@@@@@@@@@
-    @@@@@@+   :-=========-:  .+@@@@@@@@@@@@@
-    @@@@@@@@*:    .....    :*@@@@@@@@@@@@@@@
-    @@@@@@@@@@@#*=--:--=*#@@@@@@@@@@@@@@@@@@
-    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    ______     _        _   _____ _____ 
-    | ___ \   | |      | | |  _  /  ___|
-    | |_/ /__ | |_ __ _| |_| | | \ `--. 
-    |  __/ _ \| __/ _` | __| | | |`--. \
-    | | | (_) | || (_| | |_\ \_/ /\__/ /
-    \_|  \___/ \__\__,_|\__|\___/\____/      v0.1
-                                      
-"#;
-    println!("{}", boot_screen);
 }
 
 pub fn check_signals_of_current() -> Option<(i32, &'static str)> {

@@ -6,14 +6,16 @@ use super::{pid_alloc, PidHandle};
 use crate::fs::{File, Stdin, Stdout};
 use crate::mm::{translated_refmut, MemorySet, KERNEL_SPACE};
 use crate::sync::{Condvar, Mutex, Semaphore, UPIntrFreeCell, UPIntrRefMut};
+use crate::timer::get_time_ms;
 use crate::trap::{trap_handler, TrapContext};
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::sync::{Arc, Weak};
 use alloc::vec;
 use alloc::vec::Vec;
 use easy_fs::Inode;
 
 pub struct ProcessControlBlock {
+    pub name: String,
     // immutable
     pub pid: PidHandle,
     // mutable
@@ -35,6 +37,9 @@ pub struct ProcessControlBlockInner {
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
 
     pub cwd: Arc<Inode>,
+    pub stop_watch: usize,
+    pub user_time: usize,
+    pub kernel_time: usize,
 }
 
 impl ProcessControlBlockInner {
@@ -67,6 +72,24 @@ impl ProcessControlBlockInner {
     pub fn get_task(&self, tid: usize) -> Arc<TaskControlBlock> {
         self.tasks[tid].as_ref().unwrap().clone()
     }
+
+    // TODO: we try to get process info, while process is based on tasks
+    //       try combine process and task 
+    pub fn refresh_stop_watch(&mut self) -> usize {
+        let start_time = self.stop_watch;
+        self.stop_watch = get_time_ms();
+        self.stop_watch - start_time
+    }
+
+    pub fn user_clock_start(&mut self) -> usize {
+        self.kernel_time += self.refresh_stop_watch();
+        self.kernel_time
+    }
+
+    pub fn user_clock_end(&mut self) -> usize {
+        self.user_time += self.refresh_stop_watch();
+        self.user_time
+    }
 }
 
 impl ProcessControlBlock {
@@ -74,12 +97,13 @@ impl ProcessControlBlock {
         self.inner.exclusive_access(file, line)
     }
 
-    pub fn new(elf_data: &[u8], inode: Arc<Inode>) -> Arc<Self> {
+    pub fn new(elf_data: &[u8], inode: Arc<Inode>, name: &str) -> Arc<Self> {
         // memory_set with elf program headers/trampoline/trap context/user stack
         let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
         // allocate a pid
         let pid_handle = pid_alloc();
         let process = Arc::new(Self {
+            name: name.to_string(),
             pid: pid_handle,
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
@@ -104,6 +128,9 @@ impl ProcessControlBlock {
                     condvar_list: Vec::new(),
 
                     cwd: inode.clone(),
+                    stop_watch: 0,
+                    user_time: 0,
+                    kernel_time: 0,
                 })
             },
         });
@@ -208,6 +235,7 @@ impl ProcessControlBlock {
         }
         // create child process pcb
         let child = Arc::new(Self {
+            name: self.name.clone(),
             pid,
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
@@ -225,6 +253,9 @@ impl ProcessControlBlock {
                     condvar_list: Vec::new(),
 
                     cwd: parent.cwd.clone(),
+                    stop_watch: 0,
+                    user_time: 0,
+                    kernel_time: 0,
                 })
             },
         });
