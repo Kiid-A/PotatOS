@@ -14,10 +14,13 @@ use alloc::vec;
 use alloc::vec::Vec;
 use easy_fs::Inode;
 
+// TODO: Add /proc
+
 pub struct ProcessControlBlock {
-    pub name: String,
+    pub cmd: String,
     // immutable
     pub pid: PidHandle,
+    pub ppid: usize,    // should not be PidHandle because of RAII
     // mutable
     inner: UPIntrFreeCell<ProcessControlBlockInner>,
 }
@@ -37,9 +40,6 @@ pub struct ProcessControlBlockInner {
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
 
     pub cwd: Arc<Inode>,
-    pub stop_watch: usize,
-    pub user_time: usize,
-    pub kernel_time: usize,
 }
 
 impl ProcessControlBlockInner {
@@ -75,21 +75,6 @@ impl ProcessControlBlockInner {
 
     // TODO: we try to get process info, while process is based on tasks
     //       try combine process and task 
-    pub fn refresh_stop_watch(&mut self) -> usize {
-        let start_time = self.stop_watch;
-        self.stop_watch = get_time_ms();
-        self.stop_watch - start_time
-    }
-
-    pub fn user_clock_start(&mut self) -> usize {
-        self.kernel_time += self.refresh_stop_watch();
-        self.kernel_time
-    }
-
-    pub fn user_clock_end(&mut self) -> usize {
-        self.user_time += self.refresh_stop_watch();
-        self.user_time
-    }
 }
 
 impl ProcessControlBlock {
@@ -97,14 +82,15 @@ impl ProcessControlBlock {
         self.inner.exclusive_access(file, line)
     }
 
-    pub fn new(elf_data: &[u8], inode: Arc<Inode>, name: &str) -> Arc<Self> {
+    pub fn new(elf_data: &[u8], inode: Arc<Inode>, cmd: &str) -> Arc<Self> {
         // memory_set with elf program headers/trampoline/trap context/user stack
         let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
         // allocate a pid
         let pid_handle = pid_alloc();
         let process = Arc::new(Self {
-            name: name.to_string(),
+            cmd: cmd.to_string(),
             pid: pid_handle,
+            ppid: 0,
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
@@ -128,9 +114,6 @@ impl ProcessControlBlock {
                     condvar_list: Vec::new(),
 
                     cwd: inode.clone(),
-                    stop_watch: 0,
-                    user_time: 0,
-                    kernel_time: 0,
                 })
             },
         });
@@ -224,6 +207,7 @@ impl ProcessControlBlock {
         let memory_set = MemorySet::from_existed_user(&parent.memory_set);
         // alloc a pid
         let pid = pid_alloc();
+        let ppid = self.getpid();
         // copy fd table
         let mut new_fd_table: Vec<Option<Arc<dyn File + Send + Sync>>> = Vec::new();
         for fd in parent.fd_table.iter() {
@@ -235,8 +219,9 @@ impl ProcessControlBlock {
         }
         // create child process pcb
         let child = Arc::new(Self {
-            name: self.name.clone(),
+            cmd: self.cmd.clone(),
             pid,
+            ppid,
             inner: unsafe {
                 UPIntrFreeCell::new(ProcessControlBlockInner {
                     is_zombie: false,
@@ -253,9 +238,6 @@ impl ProcessControlBlock {
                     condvar_list: Vec::new(),
 
                     cwd: parent.cwd.clone(),
-                    stop_watch: 0,
-                    user_time: 0,
-                    kernel_time: 0,
                 })
             },
         });

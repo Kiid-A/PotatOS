@@ -1,10 +1,13 @@
-use super::__switch;
+use super::{TaskInfo, __switch};
 use super::{fetch_task, TaskStatus};
 use super::{ProcessControlBlock, TaskContext, TaskControlBlock};
+use crate::fs::proc::write_proc;
 use crate::sync::UPIntrFreeCell;
+use crate::timer::get_time_ms;
 use crate::trap::TrapContext;
 use alloc::sync::Arc;
 use lazy_static::*;
+use log::info;
 
 pub struct Processor {
     current: Option<Arc<TaskControlBlock>>,
@@ -40,13 +43,25 @@ pub fn run_tasks() {
         if let Some(task) = fetch_task() {
             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
             // access coming task TCB exclusively
-            let next_task_cx_ptr = task.inner.exclusive_session(|task_inner| {
+            let (next_task_cx_ptr, task_info) = task.inner.exclusive_session(|task_inner| {
                 task_inner.task_status = TaskStatus::Running;
-                &task_inner.task_cx as *const TaskContext
+                task_inner.first_time = get_time_ms();
+                task_inner.refresh_watch();
+                (&task_inner.task_cx as *const TaskContext, 
+                TaskInfo {
+                    pid: task.get_pid(),
+                    ppid: task.get_ppid(),
+                    status: task_inner.task_status,
+                    user_time: task_inner.user_time,
+                    kernel_time: task_inner.kernel_time,
+                    time_created: task_inner.time_created,
+                    first_time: task_inner.first_time,
+                })
             });
             processor.current = Some(task);
             // release processor manually
             drop(processor);
+            write_proc(task_info);
             unsafe {
                 __switch(idle_task_cx_ptr, next_task_cx_ptr);
             }

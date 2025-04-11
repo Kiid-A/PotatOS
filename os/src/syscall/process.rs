@@ -1,8 +1,9 @@
+use crate::fs::proc::{self, read_proc};
 use crate::fs::{open_file, OpenFlags};
 use crate::mm::{translated_ref, translated_refmut, translated_str};
 use crate::task::{
     current_process, current_task, current_user_token, exit_current_and_run_next, pid2process,
-    suspend_current_and_run_next, SignalFlags,
+    suspend_current_and_run_next, SignalFlags, TaskInfo,
 };
 use crate::timer::get_time_ms;
 use alloc::string::String;
@@ -123,4 +124,36 @@ pub fn sys_kill(pid: usize, signal: u32) -> isize {
     } else {
         -1
     }
+}
+
+pub fn sys_task_info(task_info_addr: usize) -> isize {
+    let task = current_task().unwrap();
+    let token = current_user_token();
+    let task_info = translated_refmut(token, task_info_addr as *mut TaskInfo);
+    let inner = task.inner.exclusive_access(file!(), line!());
+    let ti = TaskInfo {
+        pid: task.get_pid(),
+        ppid: task.get_ppid(),
+        status: inner.task_status,
+        user_time: inner.user_time,
+        kernel_time: inner.kernel_time,
+        time_created: inner.time_created,
+        first_time: inner.first_time,
+    };
+    *task_info = ti;
+    0
+}
+
+pub fn sys_read_proc(pid: usize, ti_addr: usize) -> isize {
+    let process = pid2process(pid);
+    // if process.is_none() || process.unwrap().inner_exclusive_access(file!(), line!()).is_zombie {
+    //     return -2;
+    // }
+    if process.is_none() {
+        return -1;
+    }
+
+    let token = current_user_token();
+    let task_info = translated_refmut(token, ti_addr as *mut TaskInfo);
+    read_proc(pid, task_info)
 }

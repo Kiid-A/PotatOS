@@ -17,3 +17,4 @@ pub use efs::EasyFileSystem;
 use layout::*;
 pub use vfs::Inode;
 pub use layout::DiskInodeType;
+use log::info;

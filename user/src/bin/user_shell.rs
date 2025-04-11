@@ -221,7 +221,7 @@ pub fn main() -> i32 {
                         for (i, process_argument) in process_arguments_list.iter().enumerate() {
                             let args_copy = &process_argument.args_copy;
                             if exec_builtin_cmd(args_copy) == 0 {
-                                println!("execute builtin: {}", args_copy[0].as_str());
+                                // println!("execute builtin: {}", args_copy[0].as_str());
                                 continue;
                             }
                             let pid = fork();

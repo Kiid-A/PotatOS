@@ -75,6 +75,40 @@ bitflags! {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum TaskStatus {
+    Ready,
+    Running,
+    Blocked,
+    Dead,
+}
+
+#[derive(Debug)]
+pub struct TaskInfo {
+    pub pid: usize,
+    pub ppid: usize,
+    pub status: TaskStatus,
+
+    pub user_time: usize,
+    pub kernel_time: usize,
+    pub time_created: usize,
+    pub first_time: usize,
+}
+
+impl TaskInfo {
+    pub fn new() -> Self {
+        TaskInfo {
+            pid: 0,
+            ppid: 0,
+            status: TaskStatus::Ready,
+            user_time: 0,
+            kernel_time: 0,
+            time_created: 0,
+            first_time: 0,
+        }
+    }
+}
+
 #[no_mangle]
 #[link_section = ".text.entry"]
 pub extern "C" fn _start(argc: usize, argv: usize) -> ! {

@@ -10,6 +10,7 @@ extern crate alloc;
 #[macro_use]
 extern crate bitflags;
 
+use fs::proc;
 use log::*;
 
 #[path = "boards/qemu.rs"]
@@ -106,6 +107,7 @@ pub fn rust_main() -> ! {
     timer::set_next_trigger();
     board::device_init();
     fs::list_apps();
+    proc::init_proc();
     boot_screen();
     task::add_initproc();
     *DEV_NON_BLOCKING_ACCESS.exclusive_access(file!(), line!()) = true;

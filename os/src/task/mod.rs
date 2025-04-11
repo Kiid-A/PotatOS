@@ -9,6 +9,7 @@ mod switch;
 mod task;
 
 use self::id::TaskUserRes;
+use crate::fs::proc::write_proc;
 use crate::fs::{open_file, OpenFlags, ROOT_INODE};
 use crate::sbi::shutdown;
 use alloc::{sync::Arc, vec::Vec};
@@ -26,13 +27,16 @@ pub use processor::{
     current_user_token, run_tasks, schedule, take_current_task,
 };
 pub use signal::SignalFlags;
-pub use task::{TaskControlBlock, TaskStatus};
+pub use task::{TaskControlBlock, TaskStatus, TaskInfo};
 
 pub fn suspend_current_and_run_next() {
-    // info!(
-    //     "kernel: pid[{}] suspend_current_and_run_next",
-    //     current_process().clone().pid.0
-    // );
+    // let cpid = current_process().clone().pid.0; 
+    // if cpid != 0 {
+    //     info!(
+    //         "kernel: pid[{}] suspend_current_and_run_next",
+    //         current_process().clone().pid.0
+    //     );
+    // }
     // There must be an application running.
     let task = take_current_task().unwrap();
 
@@ -41,11 +45,23 @@ pub fn suspend_current_and_run_next() {
     let task_cx_ptr = &mut task_inner.task_cx as *mut TaskContext;
     // Change status to Ready
     task_inner.task_status = TaskStatus::Ready;
+    let task_info = TaskInfo {
+        pid: task.get_pid(),
+        ppid: task.get_ppid(), 
+        status: task_inner.task_status,
+        user_time: task_inner.user_time,
+        kernel_time: task_inner.kernel_time,
+        time_created: task_inner.time_created,
+        first_time: task_inner.first_time,
+    };
     drop(task_inner);
     // ---- release current TCB
 
     // push back to ready queue.
     add_task(task);
+
+    write_proc(task_info);
+
     // jump to scheduling cycle
     schedule(task_cx_ptr);
 }
@@ -55,6 +71,16 @@ pub fn block_current_task() -> *mut TaskContext {
     let task = take_current_task().unwrap();
     let mut task_inner = task.inner_exclusive_access(file!(), line!());
     task_inner.task_status = TaskStatus::Blocked;
+    // let task_info = TaskInfo {
+    //     pid: task.get_pid(),
+    //     ppid: task.get_ppid(), 
+    //     status: task_inner.task_status,
+    //     user_time: task_inner.user_time,
+    //     kernel_time: task_inner.kernel_time,
+    //     time_created: task_inner.time_created,
+    // };
+    // write_proc(task_info);
+
     &mut task_inner.task_cx as *mut TaskContext
 }
 
@@ -85,6 +111,16 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     // record exit code
     task_inner.exit_code = Some(exit_code);
     task_inner.res = None;
+    let task_info = TaskInfo {
+        pid: task.get_pid(),
+        ppid: task.get_ppid(), 
+        status: TaskStatus::Dead,
+        user_time: task_inner.user_time,
+        kernel_time: task_inner.kernel_time,
+        time_created: task_inner.time_created,
+        first_time: task_inner.first_time,
+    };
+    write_proc(task_info);
     // here we do not remove the thread since we are still using the kstack
     // it will be deallocated when sys_waittid is called
     drop(task_inner);

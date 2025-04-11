@@ -45,6 +45,14 @@ pub fn fstat(fd: usize, st: &Stat) -> isize {
     sys_fstat(fd, st)
 }
 
+pub fn task_info(ti: &TaskInfo) -> isize {
+    sys_task_info(ti)
+}
+
+pub fn read_proc(pid: usize, ti: &TaskInfo) -> isize {
+    sys_read_proc(pid, ti)
+}
+
 pub fn ls() -> isize {
     // unimplemented!("lstat");
     sys_ls()

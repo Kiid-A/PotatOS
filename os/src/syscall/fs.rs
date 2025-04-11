@@ -2,9 +2,10 @@ use core::cmp::min;
 use core::mem::size_of;
 use core::{clone, ptr};
 
-use crate::fs::{make_pipe, open_file, OpenFlags, Stat, ROOT_INODE};
+use crate::fs::proc::read_proc;
+use crate::fs::{make_pipe, open_file, proc, OpenFlags, Stat, ROOT_INODE};
 use crate::mm::{translated_byte_buffer, translated_ref, translated_refmut, translated_str, UserBuffer};
-use crate::task::{current_process, current_user_token};
+use crate::task::{current_process, current_user_token, TaskInfo};
 use alloc::string::String;
 use alloc::sync::Arc;
 use easy_fs::{DiskInodeType, Inode};

@@ -8,6 +8,7 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use log::info;
 use spin::{Mutex, MutexGuard};
 
 pub struct Inode {
@@ -104,6 +105,7 @@ impl Inode {
     }
 
     pub fn find(&self, path: &str) -> Option<Arc<Inode>> {
+        // info!("lock at: {} {}", file!(), line!());
         let fs = self.fs.lock();
         let mut block_id = self.block_id as u32;
         let mut block_offset = self.block_offset;
@@ -168,6 +170,7 @@ impl Inode {
 
     // create inode under current inode
     fn create_inode(&self, name: &str, inode_type: DiskInodeType) -> Option<Arc<Inode>> {
+        // info!("lock at: {} {}", file!(), line!());
         let mut fs = self.fs.lock();
         let op = |root_inode: &mut DiskInode| {
             // assert it is a directory
@@ -228,6 +231,7 @@ impl Inode {
 
     // return nothing if it is a file
     pub fn ls(&self) -> Vec<String> {
+        // info!("lock at: {} {}", file!(), line!());
         let _fs = self.fs.lock();
         self.read_disk_inode(|disk_inode| {
             let mut v: Vec<String> = Vec::new(); 
@@ -248,11 +252,13 @@ impl Inode {
     }
 
     pub fn read_at(&self, offset: usize, buf: &mut [u8]) -> usize {
+        // info!("lock at: {} {}", file!(), line!());
         let _fs = self.fs.lock();
         self.read_disk_inode(|disk_inode| disk_inode.read_at(offset, buf, &self.block_device))
     }
 
     pub fn write_at(&self, offset: usize, buf: &[u8]) -> usize {
+        // info!("lock at: {} {}", file!(), line!());
         let mut fs = self.fs.lock();
         let size = self.modify_disk_inode(|disk_inode| {
             // make sure you are writing a file
@@ -266,6 +272,7 @@ impl Inode {
 
     /// clear only filetype, or make sure you are removing an empty dir
     pub fn clear(&self) {
+        // info!("lock at: {} {}", file!(), line!());
         let mut fs = self.fs.lock();
         self.modify_disk_inode(|disk_inode| {
             // assert!(disk_inode.is_file());
@@ -290,6 +297,7 @@ impl Inode {
             dinode.nlink += 1;  // increase reference count
         });
         let new_ino = inode.get_inode_id();
+        // info!("lock at: {} {}", file!(), line!());
         let mut fs = self.fs.lock();
         // insert a new directory entry into ROOT_DIR
         self.modify_disk_inode(|root_inode| {
@@ -382,6 +390,7 @@ impl Inode {
     }
     /// Get inode number of the inode
     pub fn get_ino(&self) -> u32 {
+        // info!("lock at: {} {}", file!(), line!());
         let fs = self.fs.lock();
         fs.get_ino(self.block_id, self.block_offset) as u32
     }

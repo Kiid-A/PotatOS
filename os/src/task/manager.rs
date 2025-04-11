@@ -1,8 +1,10 @@
-use super::{ProcessControlBlock, TaskControlBlock, TaskStatus};
+use super::{ProcessControlBlock, TaskControlBlock, TaskInfo, TaskStatus};
+use crate::fs::proc::write_proc;
 use crate::sync::UPIntrFreeCell;
 use alloc::collections::{BTreeMap, VecDeque};
 use alloc::sync::Arc;
 use lazy_static::*;
+use log::info;
 
 pub struct TaskManager {
     ready_queue: VecDeque<Arc<TaskControlBlock>>,
@@ -37,8 +39,20 @@ pub fn add_task(task: Arc<TaskControlBlock>) {
 pub fn wakeup_task(task: Arc<TaskControlBlock>) {
     let mut task_inner = task.inner_exclusive_access(file!(), line!());
     task_inner.task_status = TaskStatus::Ready;
+    let task_info = TaskInfo {
+        pid: task.get_pid(),
+        ppid: task.get_ppid(), 
+        status: task_inner.task_status,
+        user_time: task_inner.user_time,
+        kernel_time: task_inner.kernel_time,
+        time_created: task_inner.time_created,
+        first_time: task_inner.first_time,
+    };
+    
     drop(task_inner);
     add_task(task);
+    
+    write_proc(task_info);
 }
 
 pub fn fetch_task() -> Option<Arc<TaskControlBlock>> {

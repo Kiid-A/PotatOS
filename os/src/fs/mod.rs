@@ -2,8 +2,10 @@ pub mod inode;
 mod pipe;
 mod stdio;
 pub mod fstat;
+pub mod proc;
 
 use crate::mm::UserBuffer;
+use crate::task;
 
 pub trait File: Send + Sync {
     fn readable(&self) -> bool;
@@ -13,6 +15,7 @@ pub trait File: Send + Sync {
     fn stat(&self) -> Stat;
 }
 
+use task::{TaskInfo, TaskControlBlock};
 use fstat::StatMode;
 pub use inode::ROOT_INODE;
 pub use inode::{open_file, OpenFlags};
