@@ -75,6 +75,16 @@ bitflags! {
     }
 }
 
+bitflags! {
+    pub struct WaitOption: u32 {
+        const WNOHANG    = 1;
+        const WUNTRACED  = 2;
+        const WEXITED    = 4;
+        const WCONTINUED = 8;
+        const WNOWAIT    = 0x1000000;
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum TaskStatus {
     Ready,

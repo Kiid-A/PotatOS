@@ -13,7 +13,7 @@ SBI ?= rustsbi
 BOOTLOADER := ../bootloader/$(SBI)-$(BOARD).bin
 
 # GUI
-GUI ?= off
+GUI ?= on
 ifeq ($(GUI), off)
 	GUI_OPTION := -display none
 endif

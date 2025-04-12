@@ -4,7 +4,7 @@
 extern crate alloc;
 extern crate user_lib;
 
-use user_lib::{Display, VIRTGPU_XRES, VIRTGPU_YRES};
+use user_lib::{println, Display, VIRTGPU_XRES, VIRTGPU_YRES};
 
 use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::prelude::{DrawTarget, Drawable, Point, RgbColor, Size};

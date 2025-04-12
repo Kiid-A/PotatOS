@@ -42,6 +42,18 @@ pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
     }
 }
 
+pub fn wait4(pid: isize, exit_code: &mut i32, option: u32) -> isize {
+    loop {
+        match sys_wait4(pid, exit_code as *mut _, option) {
+            -2 => {
+                yield_();
+            }
+            // -1 or a real pid
+            exit_pid => return exit_pid,
+        }
+    }
+}
+
 pub fn waitpid_nb(pid: usize, exit_code: &mut i32) -> isize {
     sys_waitpid(pid as isize, exit_code as *mut _)
 }

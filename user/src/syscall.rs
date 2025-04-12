@@ -144,6 +144,10 @@ pub fn sys_waitpid(pid: isize, exit_code: *mut i32) -> isize {
     syscall(SYSCALL_WAITPID, [pid as usize, exit_code as usize, 0])
 }
 
+pub fn sys_wait4(pid: isize, exit_code: *mut i32, options: u32) -> isize {
+    syscall(SYSCALL_WAITPID, [pid as usize, exit_code as usize, options as usize])
+}
+
 pub fn sys_task_info(ti: &TaskInfo) -> isize {
     syscall(SYSCALL_TASK_INFO, [ti as *const _ as usize, 0, 0])
 }

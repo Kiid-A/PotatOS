@@ -10,6 +10,16 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 
+bitflags! {
+    struct WaitOption: u32 {
+        const WNOHANG    = 1;
+        const WUNTRACED  = 2;
+        const WEXITED    = 4;
+        const WCONTINUED = 8;
+        const WNOWAIT    = 0x1000000;
+    }
+}
+
 pub fn sys_exit(exit_code: i32) -> ! {
     exit_current_and_run_next(exit_code);
     panic!("Unreachable in sys_exit!");
@@ -72,8 +82,9 @@ pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {
 
 /// If there is not a child process whose pid is same as given, return -1.
 /// Else if there is a child process but it is still running, return -2.
-pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
+pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32, option: u32) -> isize {
     let process = current_process();
+    let option = WaitOption::from_bits(option).unwrap();
     // find a child process
     loop {
         let mut inner = process.inner_exclusive_access(file!(), line!());
@@ -107,6 +118,9 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
         } else {
             drop(inner);
             drop(process);
+            if option.contains(WaitOption::WNOHANG) {
+                return 0;
+            }
             return -2;
         }
     }
