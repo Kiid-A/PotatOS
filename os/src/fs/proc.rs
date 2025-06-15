@@ -1,14 +1,15 @@
-use spin::Mutex;
 use crate::task::{self, TaskInfo};
 use alloc::{string::String, sync::Arc};
 use lazy_static::*;
+use spin::Mutex;
 
 // TODO: change /proc into vectors to reduce memory usage
 
 const MAX_TASKS: usize = 100;
 
 lazy_static! {
-    static ref PROCESS_INFO_VEC: Arc<Mutex<[TaskInfo]>> = Arc::new(Mutex::new([TaskInfo::default(); MAX_TASKS]));
+    static ref PROCESS_INFO_VEC: Arc<Mutex<[TaskInfo]>> =
+        Arc::new(Mutex::new([TaskInfo::default(); MAX_TASKS]));
 }
 
 pub fn init_proc() -> isize {
@@ -36,7 +37,6 @@ pub fn read_proc(pid: usize, task_info: *mut TaskInfo) -> isize {
 //     0
 // }
 
-
 pub fn write_proc(task_info: TaskInfo) -> isize {
     // if task_info.pid <= 1 {
     //     return 0;
@@ -44,7 +44,7 @@ pub fn write_proc(task_info: TaskInfo) -> isize {
     // let filename = task_info.pid.to_string();
     // info!("write proc: {}", filename);
     // let proc_inode = PROC_INODE.clone();
-    
+
     // info!("filename: {}", filename);
     // let inode = proc_inode.find(&filename);
     // if inode.is_none() {
@@ -59,7 +59,7 @@ pub fn write_proc(task_info: TaskInfo) -> isize {
     //         &task_info as *const TaskInfo as *const u8,
     //         core::mem::size_of::<TaskInfo>(),
     //     )
-    // }; 
+    // };
     // info!("ready to write proc");
     // inode.write_at(0, bytes);
     // info!("write proc done, write {} bytes", bytes.len());

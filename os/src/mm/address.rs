@@ -2,6 +2,11 @@ use super::PageTableEntry;
 use crate::config::{PAGE_SIZE, PAGE_SIZE_BITS};
 use core::fmt::{self, Debug, Formatter};
 
+/* SV39
+ 39|38 ---- Virtual Page Number ---- 12|11 ---- Page Offset ---- 1|0
+ 56|55 ---- Physical Page Number --- 12|11 ---- Page Offset ---- 1|0
+*/
+
 const PA_WIDTH_SV39: usize = 56;
 const VA_WIDTH_SV39: usize = 39;
 const PPN_WIDTH_SV39: usize = PA_WIDTH_SV39 - PAGE_SIZE_BITS;

@@ -11,13 +11,13 @@ use user_lib::{exec, exit, fork, println, thread_create, wait, waittid};
 
 const T: u64 = 10;
 const N: u64 = 1e8 as u64;
-const M: u64 = 2022210109;
+const M: u64 = 114514;
 
 
 pub fn calc(n: u64) -> ! {
     let mut rng = Rand64::new(42);
     let mut sum = 0;
-    let times = n + rng.rand_range(0..12345);
+    let times = n + rng.rand_range(n/2..n);
     let size = rng.rand_range(100..123456);
     for _ in 0..times {
         let num: u64 = rng.rand_range(0..size);

@@ -9,7 +9,7 @@ extern crate user_lib;
 #[no_mangle]
 pub fn main(argc: usize, argv: &[&str]) -> i32 {
     if argc != 1 {
-        println!("Usage: task_info");
+        println!("Usage: task_info <cmd>");
         return -1;
     }
     let ti = TaskInfo::new();
