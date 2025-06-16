@@ -74,7 +74,9 @@ impl VirtIOBlock {
             )
         };
         let mut condvars = BTreeMap::new();
-        let channels = virtio_blk.exclusive_access(file!(), line!()).virt_queue_size();
+        let channels = virtio_blk
+            .exclusive_access(file!(), line!())
+            .virt_queue_size();
         for i in 0..channels {
             let condvar = Condvar::new();
             condvars.insert(i, condvar);

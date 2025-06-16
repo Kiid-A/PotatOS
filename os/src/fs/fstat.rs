@@ -1,4 +1,3 @@
-/// StatMode 定义：
 bitflags! {
     pub struct StatMode: u32 {
         const NULL  = 0;
@@ -20,7 +19,7 @@ pub struct Stat {
 }
 
 impl Stat {
-    pub fn new (inode_: u64, mode_: StatMode, nlink_: u32) -> Self {
+    pub fn new(inode_: u64, mode_: StatMode, nlink_: u32) -> Self {
         Self {
             dev: 0,
             ino: inode_,

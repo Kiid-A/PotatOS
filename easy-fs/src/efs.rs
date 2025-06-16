@@ -1,13 +1,13 @@
 use core::mem::size_of;
 
 use super::{
-    block_cache_sync_all, get_block_cache, Bitmap, BlockDevice, DiskInode, DiskInodeType, Inode,
-    SuperBlock, DirEntry, DIRENT_SZ,
+    block_cache_sync_all, get_block_cache, Bitmap, BlockDevice, DirEntry, DiskInode, DiskInodeType,
+    Inode, SuperBlock, DIRENT_SZ,
 };
 use crate::BLOCK_SZ;
+use alloc::vec::Vec;
 use alloc::{string::ToString, sync::Arc};
 use spin::Mutex;
-use alloc::vec::Vec;
 
 pub struct EasyFileSystem {
     pub block_device: Arc<dyn BlockDevice>,
@@ -118,7 +118,14 @@ impl EasyFileSystem {
         // acquire efs lock temporarily
         let (block_id, block_offset) = efs.lock().get_disk_inode_pos(0);
         // release efs lock
-        Inode::new("/".to_string(), block_id, block_offset, Arc::clone(efs), block_device, 0)
+        Inode::new(
+            "/".to_string(),
+            block_id,
+            block_offset,
+            Arc::clone(efs),
+            block_device,
+            0,
+        )
     }
 
     pub fn get_disk_inode_pos(&self, inode_id: u32) -> (u32, usize) {

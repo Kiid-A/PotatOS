@@ -133,9 +133,9 @@ impl Inode {
         // finally get it
         Some(Arc::new(Self::new(
             real_name,
-            block_id, 
-            block_offset, 
-            self.fs.clone(), 
+            block_id,
+            block_offset,
+            self.fs.clone(),
             self.block_device.clone(),
             new_inode_id,
         )))
@@ -181,6 +181,13 @@ impl Inode {
         if self.modify_disk_inode(op).is_some() {
             return None;
         }
+        const NAME_LIMIT_LEN: usize = 27;
+        assert!(
+            name.len() <= NAME_LIMIT_LEN,
+            "name {} is too long, limit is {}",
+            name,
+            NAME_LIMIT_LEN
+        );
         // create a new file
         // alloc a inode with an indirect block
         let new_inode_id = fs.alloc_inode();
@@ -234,7 +241,7 @@ impl Inode {
         // info!("lock at: {} {}", file!(), line!());
         let _fs = self.fs.lock();
         self.read_disk_inode(|disk_inode| {
-            let mut v: Vec<String> = Vec::new(); 
+            let mut v: Vec<String> = Vec::new();
             if disk_inode.is_file() {
                 return v;
             }
@@ -287,6 +294,13 @@ impl Inode {
     }
     /// Create a hard link with new_name for file with old_name
     pub fn linkat(&self, old_path: &str, new_path: &str) -> isize {
+        const NAME_LIMIT_LEN: usize = 27;
+        assert!(
+            new_path.len() <= NAME_LIMIT_LEN,
+            "path {} is too long, limit is {}",
+            new_path,
+            NAME_LIMIT_LEN
+        );
         // get inode of file with old_name
         let inode = self.find(old_path);
         if inode.is_none() {
@@ -294,7 +308,7 @@ impl Inode {
         }
         let inode = inode.unwrap();
         inode.modify_disk_inode(|dinode| {
-            dinode.nlink += 1;  // increase reference count
+            dinode.nlink += 1; // increase reference count
         });
         let new_ino = inode.get_inode_id();
         // info!("lock at: {} {}", file!(), line!());
@@ -339,7 +353,7 @@ impl Inode {
 
         let mut res = -1;
         self.modify_disk_inode(|dinode| {
-            // Remove(For simplisity, not remove, just set to empty) 
+            // Remove(For simplisity, not remove, just set to empty)
             // the directory entry with name in the ROOT_DIR
             let fcnt = (dinode.size as usize) / DIRENT_SZ;
             let mut pos = 0 as usize;
@@ -353,18 +367,22 @@ impl Inode {
                     // dirent = DirEntry::empty();
                     // dinode.write_at(i * DIRENT_SZ, dirent.as_bytes(), &self.block_device);
                     res = 0;
-                    pos = i+1;
+                    pos = i + 1;
                     // dinode.decrease_size(((fcnt-1) * DIRENT_SZ) as u32, &self.block_device);
                     break;
                 }
             }
             if res == 0 {
                 let mut dirent = DirEntry::empty();
-                for i in pos..(fcnt+1) {
+                for i in pos..(fcnt + 1) {
                     dinode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device);
-                    dinode.write_at((i-1) * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device);
+                    dinode.write_at(
+                        (i - 1) * DIRENT_SZ,
+                        dirent.as_bytes_mut(),
+                        &self.block_device,
+                    );
                 }
-                let new_size = (fcnt-1) * DIRENT_SZ;
+                let new_size = (fcnt - 1) * DIRENT_SZ;
                 dinode.size = new_size as u32;
             }
         });

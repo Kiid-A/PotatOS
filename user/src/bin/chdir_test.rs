@@ -8,12 +8,7 @@ use user_lib::{chdir, close, exec, fstat, getcwd, link, mkdir, open, read, unlin
 
 #[no_mangle]
 pub fn main(argc: usize, argv: &[&str]) -> i32 {
-    // panic!("Chdir not implemented");
-    // if argc != 2 {
-    //     println!("Usage: chdir <dir>");
-    //     return -1;
-    // }
-    // chdir(argv[1]) as i32
+
     let dir = "test_dir\0";
     mkdir(dir);
     let mut buffer = [0u8; 1024]; // 1KiB

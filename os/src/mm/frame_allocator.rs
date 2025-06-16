@@ -123,7 +123,9 @@ pub fn frame_alloc_more(num: usize) -> Option<Vec<FrameTracker>> {
 }
 
 pub fn frame_dealloc(ppn: PhysPageNum) {
-    FRAME_ALLOCATOR.exclusive_access(file!(), line!()).dealloc(ppn);
+    FRAME_ALLOCATOR
+        .exclusive_access(file!(), line!())
+        .dealloc(ppn);
 }
 
 #[allow(unused)]

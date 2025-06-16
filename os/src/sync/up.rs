@@ -1,6 +1,6 @@
+use alloc::borrow;
 use core::cell::{RefCell, RefMut, UnsafeCell};
 use core::ops::{Deref, DerefMut};
-use alloc::borrow;
 use lazy_static::*;
 use log::info;
 use riscv::register::sstatus;

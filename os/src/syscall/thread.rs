@@ -67,7 +67,10 @@ pub fn sys_waittid(tid: usize) -> i32 {
     let mut exit_code: Option<i32> = None;
     let waited_task = process_inner.tasks[tid].as_ref();
     if let Some(waited_task) = waited_task {
-        if let Some(waited_exit_code) = waited_task.inner_exclusive_access(file!(), line!()).exit_code {
+        if let Some(waited_exit_code) = waited_task
+            .inner_exclusive_access(file!(), line!())
+            .exit_code
+        {
             exit_code = Some(waited_exit_code);
         }
     } else {

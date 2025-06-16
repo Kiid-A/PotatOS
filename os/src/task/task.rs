@@ -20,7 +20,11 @@ pub struct TaskControlBlock {
 }
 
 impl TaskControlBlock {
-    pub fn inner_exclusive_access(&self, file: &'static str, line: u32,) -> UPIntrRefMut<'_, TaskControlBlockInner> {
+    pub fn inner_exclusive_access(
+        &self,
+        file: &'static str,
+        line: u32,
+    ) -> UPIntrRefMut<'_, TaskControlBlockInner> {
         self.inner.exclusive_access(file, line)
     }
 
@@ -48,7 +52,7 @@ pub struct TaskControlBlockInner {
 
     pub user_time: usize,
     pub kernel_time: usize,
-    pub time_created: usize,    
+    pub time_created: usize,
     pub first_time: usize,
     pub stop_watch: usize,
 }
@@ -115,7 +119,6 @@ impl TaskControlBlock {
                     stop_watch: 0,
                 })
             },
-            
         }
     }
 }

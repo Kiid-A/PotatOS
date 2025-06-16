@@ -47,7 +47,10 @@ impl VirtIOInputWrapper {
 
 impl InputDevice for VirtIOInputWrapper {
     fn is_empty(&self) -> bool {
-        self.inner.exclusive_access(file!(), line!()).events.is_empty()
+        self.inner
+            .exclusive_access(file!(), line!())
+            .events
+            .is_empty()
     }
 
     fn read_event(&self) -> u64 {

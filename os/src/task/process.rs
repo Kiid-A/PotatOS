@@ -20,7 +20,7 @@ pub struct ProcessControlBlock {
     pub cmd: String,
     // immutable
     pub pid: PidHandle,
-    pub ppid: usize,    // should not be PidHandle because of RAII
+    pub ppid: usize, // should not be PidHandle because of RAII
     // mutable
     inner: UPIntrFreeCell<ProcessControlBlockInner>,
 }
@@ -74,11 +74,15 @@ impl ProcessControlBlockInner {
     }
 
     // TODO: we try to get process info, while process is based on tasks
-    //       try combine process and task 
+    //       try combine process and task
 }
 
 impl ProcessControlBlock {
-    pub fn inner_exclusive_access(&self, file: &'static str, line: u32,) -> UPIntrRefMut<'_, ProcessControlBlockInner> {
+    pub fn inner_exclusive_access(
+        &self,
+        file: &'static str,
+        line: u32,
+    ) -> UPIntrRefMut<'_, ProcessControlBlockInner> {
         self.inner.exclusive_access(file, line)
     }
 
@@ -148,7 +152,10 @@ impl ProcessControlBlock {
 
     /// Only support processes with a single thread.
     pub fn exec(self: &Arc<Self>, elf_data: &[u8], args: Vec<String>) {
-        assert_eq!(self.inner_exclusive_access(file!(), line!()).thread_count(), 1);
+        assert_eq!(
+            self.inner_exclusive_access(file!(), line!()).thread_count(),
+            1
+        );
         // memory_set with elf program headers/trampoline/trap context/user stack
         let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
         let new_token = memory_set.token();

@@ -64,8 +64,9 @@ impl MemorySet {
     pub fn remove_framed_area(&mut self, range: VPNRange) {
         let mut idx = 0;
         for area in self.areas.iter_mut() {
-            if area.vpn_range.get_start().0 == range.get_start().0 
-                && area.vpn_range.get_end().0 == range.get_end().0 {
+            if area.vpn_range.get_start().0 == range.get_start().0
+                && area.vpn_range.get_end().0 == range.get_end().0
+            {
                 area.unmap(&mut self.page_table);
                 break;
             }

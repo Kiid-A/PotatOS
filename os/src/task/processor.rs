@@ -1,6 +1,6 @@
-use super::{TaskInfo, __switch};
 use super::{fetch_task, TaskStatus};
 use super::{ProcessControlBlock, TaskContext, TaskControlBlock};
+use super::{TaskInfo, __switch};
 use crate::fs::proc::write_proc;
 use crate::sync::UPIntrFreeCell;
 use crate::timer::get_time_ms;
@@ -47,16 +47,18 @@ pub fn run_tasks() {
                 task_inner.task_status = TaskStatus::Running;
                 task_inner.first_time = get_time_ms();
                 task_inner.refresh_watch();
-                (&task_inner.task_cx as *const TaskContext, 
-                TaskInfo {
-                    pid: task.get_pid(),
-                    ppid: task.get_ppid(),
-                    status: task_inner.task_status,
-                    user_time: task_inner.user_time,
-                    kernel_time: task_inner.kernel_time,
-                    time_created: task_inner.time_created,
-                    first_time: task_inner.first_time,
-                })
+                (
+                    &task_inner.task_cx as *const TaskContext,
+                    TaskInfo {
+                        pid: task.get_pid(),
+                        ppid: task.get_ppid(),
+                        status: task_inner.task_status,
+                        user_time: task_inner.user_time,
+                        kernel_time: task_inner.kernel_time,
+                        time_created: task_inner.time_created,
+                        first_time: task_inner.first_time,
+                    },
+                )
             });
             processor.current = Some(task);
             // release processor manually

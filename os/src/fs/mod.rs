@@ -1,8 +1,8 @@
+pub mod fstat;
 pub mod inode;
 mod pipe;
-mod stdio;
-pub mod fstat;
 pub mod proc;
+mod stdio;
 
 use crate::mm::UserBuffer;
 use crate::task;
@@ -15,11 +15,11 @@ pub trait File: Send + Sync {
     fn stat(&self) -> Stat;
 }
 
-use task::{TaskInfo, TaskControlBlock};
+pub use fstat::Stat;
 use fstat::StatMode;
+pub use inode::list_apps;
 pub use inode::ROOT_INODE;
 pub use inode::{open_file, OpenFlags};
 pub use pipe::make_pipe;
 pub use stdio::{Stdin, Stdout};
-pub use fstat::Stat;
-pub use inode::list_apps;
+use task::{TaskControlBlock, TaskInfo};

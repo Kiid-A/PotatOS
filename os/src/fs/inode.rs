@@ -3,8 +3,8 @@ use super::{File, Stat};
 use crate::drivers::BLOCK_DEVICE;
 use crate::mm::UserBuffer;
 use crate::sync::UPIntrFreeCell;
-use alloc::{string::String, sync::Arc};
 use alloc::vec::Vec;
+use alloc::{string::String, sync::Arc};
 use bitflags::*;
 use easy_fs::{DiskInodeType, EasyFileSystem, Inode};
 use lazy_static::*;
@@ -95,8 +95,7 @@ pub fn open_file(cwd: Arc<Inode>, name: &str, flags: OpenFlags) -> Option<Arc<OS
             Some(Arc::new(OSInode::new(readable, writable, inode)))
         } else {
             // create file
-            cwd
-                .create_file(name)
+            cwd.create_file(name)
                 .map(|inode| Arc::new(OSInode::new(readable, writable, inode)))
         }
     } else {

@@ -123,10 +123,10 @@ impl DiskInode {
             let remaining = data_blocks - INDIRECT2_BOUND;
             let level2_blocks = (remaining + INODE_INDIRECT2_COUNT - 1) / INODE_INDIRECT2_COUNT;
             let level1_blocks = (remaining + INODE_INDIRECT1_COUNT - 1) / INODE_INDIRECT1_COUNT;
-            
+
             total += 1 + level2_blocks + level1_blocks;
         }
-        
+
         total as u32
     }
     pub fn blocks_num_needed(&self, new_size: u32) -> u32 {
@@ -267,7 +267,7 @@ impl DiskInode {
         } else {
             total_blocks as usize % INODE_INDIRECT1_COUNT
         };
-        
+
         // alloc low-level indirect1
         get_block_cache(self.indirect2 as usize, Arc::clone(block_device))
             .lock()

@@ -41,17 +41,17 @@ pub fn wakeup_task(task: Arc<TaskControlBlock>) {
     task_inner.task_status = TaskStatus::Ready;
     let task_info = TaskInfo {
         pid: task.get_pid(),
-        ppid: task.get_ppid(), 
+        ppid: task.get_ppid(),
         status: task_inner.task_status,
         user_time: task_inner.user_time,
         kernel_time: task_inner.kernel_time,
         time_created: task_inner.time_created,
         first_time: task_inner.first_time,
     };
-    
+
     drop(task_inner);
     add_task(task);
-    
+
     write_proc(task_info);
 }
 
@@ -65,7 +65,9 @@ pub fn pid2process(pid: usize) -> Option<Arc<ProcessControlBlock>> {
 }
 
 pub fn insert_into_pid2process(pid: usize, process: Arc<ProcessControlBlock>) {
-    PID2PCB.exclusive_access(file!(), line!()).insert(pid, process);
+    PID2PCB
+        .exclusive_access(file!(), line!())
+        .insert(pid, process);
 }
 
 pub fn remove_from_pid2process(pid: usize) {

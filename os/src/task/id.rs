@@ -56,7 +56,9 @@ pub fn pid_alloc() -> PidHandle {
 
 impl Drop for PidHandle {
     fn drop(&mut self) {
-        PID_ALLOCATOR.exclusive_access(file!(), line!()).dealloc(self.0);
+        PID_ALLOCATOR
+            .exclusive_access(file!(), line!())
+            .dealloc(self.0);
     }
 }
 
@@ -72,11 +74,13 @@ pub struct KernelStack(pub usize);
 pub fn kstack_alloc() -> KernelStack {
     let kstack_id = KSTACK_ALLOCATOR.exclusive_access(file!(), line!()).alloc();
     let (kstack_bottom, kstack_top) = kernel_stack_position(kstack_id);
-    KERNEL_SPACE.exclusive_access(file!(), line!()).insert_framed_area(
-        kstack_bottom.into(),
-        kstack_top.into(),
-        MapPermission::R | MapPermission::W,
-    );
+    KERNEL_SPACE
+        .exclusive_access(file!(), line!())
+        .insert_framed_area(
+            kstack_bottom.into(),
+            kstack_top.into(),
+            MapPermission::R | MapPermission::W,
+        );
     KernelStack(kstack_id)
 }
 
@@ -87,7 +91,9 @@ impl Drop for KernelStack {
         KERNEL_SPACE
             .exclusive_access(file!(), line!())
             .remove_area_with_start_vpn(kernel_stack_bottom_va.into());
-        KSTACK_ALLOCATOR.exclusive_access(file!(), line!()).dealloc(self.0);
+        KSTACK_ALLOCATOR
+            .exclusive_access(file!(), line!())
+            .dealloc(self.0);
     }
 }
 

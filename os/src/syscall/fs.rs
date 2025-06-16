@@ -4,7 +4,9 @@ use core::{clone, ptr};
 
 use crate::fs::proc::read_proc;
 use crate::fs::{make_pipe, open_file, proc, OpenFlags, Stat, ROOT_INODE};
-use crate::mm::{translated_byte_buffer, translated_ref, translated_refmut, translated_str, UserBuffer};
+use crate::mm::{
+    translated_byte_buffer, translated_ref, translated_refmut, translated_str, UserBuffer,
+};
 use crate::task::{current_process, current_user_token, TaskInfo};
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -60,7 +62,11 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
     let inner = process.inner_exclusive_access(file!(), line!());
     let cwd = inner.cwd.clone();
     drop(inner);
-    if let Some(inode) = open_file(cwd.clone(), path.as_str(), OpenFlags::from_bits(flags).unwrap()) {
+    if let Some(inode) = open_file(
+        cwd.clone(),
+        path.as_str(),
+        OpenFlags::from_bits(flags).unwrap(),
+    ) {
         let mut inner = process.inner_exclusive_access(file!(), line!());
         let fd = inner.alloc_fd();
         inner.fd_table[fd] = Some(inode);
@@ -114,7 +120,7 @@ pub fn sys_dup(fd: usize) -> isize {
 pub fn sys_getcwd(buf: *mut u8, len: usize) -> isize {
     let process = current_process();
     info!("pid: {}", process.pid.0);
-    let token = current_user_token(); 
+    let token = current_user_token();
     let mut v = translated_byte_buffer(token, buf, len);
     let inner = process.inner_exclusive_access(file!(), line!());
     let wd = inner.cwd.clone();
@@ -187,7 +193,7 @@ pub fn sys_unlinkat(path_ptr: *const u8) -> isize {
     let path = translated_str(token, path_ptr);
     let inner = process.inner_exclusive_access(file!(), line!());
     let cwd = inner.cwd.clone();
-    cwd.unlinkat(&path) 
+    cwd.unlinkat(&path)
 }
 
 pub fn sys_chdir(path_ptr: *const u8) -> isize {
@@ -210,16 +216,16 @@ pub fn sys_chdir(path_ptr: *const u8) -> isize {
     } else {
         cwd.find(&path)
     };
-    
+
     if dir.is_some() && dir.clone().unwrap().is_dir() {
-        inner = process.inner_exclusive_access(file!(), line!()); 
+        inner = process.inner_exclusive_access(file!(), line!());
         // inner.parent.as_mut().unwrap().upgrade().unwrap().inner_exclusive_access(file!(), line!()).cwd = dir.unwrap().clone();
         inner.cwd = dir.unwrap().clone();
     } else {
         println!("{} not exist or not a directory", path);
         return -1;
     }
-    
+
     0
 }
 
@@ -256,7 +262,7 @@ pub fn sys_remove(path_ptr: *const u8, args: *const u8) -> isize {
             if flag == -1 {
                 println!("Failed to unlink: {}", path);
             }
-        },
+        }
         DiskInodeType::Directory => {
             if arg != "-r" {
                 // shall be '-r'
@@ -268,7 +274,7 @@ pub fn sys_remove(path_ptr: *const u8, args: *const u8) -> isize {
             if flag == -1 {
                 println!("Failed to unlink: {}", path);
             }
-        },
+        }
     };
     0
 }
@@ -285,7 +291,7 @@ pub fn remove_dir(inode: Arc<Inode>) -> isize {
                 remove_dir(c_inode);
             }
             inode.clear();
-        },
+        }
         DiskInodeType::File => {
             inode.clear();
         }

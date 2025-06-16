@@ -101,7 +101,9 @@ pub fn make_pipe() -> (Arc<Pipe>, Arc<Pipe>) {
     let buffer = Arc::new(unsafe { UPIntrFreeCell::new(PipeRingBuffer::new()) });
     let read_end = Arc::new(Pipe::read_end_with_buffer(buffer.clone()));
     let write_end = Arc::new(Pipe::write_end_with_buffer(buffer.clone()));
-    buffer.exclusive_access(file!(), line!()).set_write_end(&write_end);
+    buffer
+        .exclusive_access(file!(), line!())
+        .set_write_end(&write_end);
     (read_end, write_end)
 }
 

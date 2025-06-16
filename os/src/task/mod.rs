@@ -27,10 +27,10 @@ pub use processor::{
     current_user_token, run_tasks, schedule, take_current_task,
 };
 pub use signal::SignalFlags;
-pub use task::{TaskControlBlock, TaskStatus, TaskInfo};
+pub use task::{TaskControlBlock, TaskInfo, TaskStatus};
 
 pub fn suspend_current_and_run_next() {
-    // let cpid = current_process().clone().pid.0; 
+    // let cpid = current_process().clone().pid.0;
     // if cpid != 0 {
     //     info!(
     //         "kernel: pid[{}] suspend_current_and_run_next",
@@ -47,7 +47,7 @@ pub fn suspend_current_and_run_next() {
     task_inner.task_status = TaskStatus::Ready;
     let task_info = TaskInfo {
         pid: task.get_pid(),
-        ppid: task.get_ppid(), 
+        ppid: task.get_ppid(),
         status: task_inner.task_status,
         user_time: task_inner.user_time,
         kernel_time: task_inner.kernel_time,
@@ -73,7 +73,7 @@ pub fn block_current_task() -> *mut TaskContext {
     task_inner.task_status = TaskStatus::Blocked;
     // let task_info = TaskInfo {
     //     pid: task.get_pid(),
-    //     ppid: task.get_ppid(), 
+    //     ppid: task.get_ppid(),
     //     status: task_inner.task_status,
     //     user_time: task_inner.user_time,
     //     kernel_time: task_inner.kernel_time,
@@ -113,7 +113,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     task_inner.res = None;
     let task_info = TaskInfo {
         pid: task.get_pid(),
-        ppid: task.get_ppid(), 
+        ppid: task.get_ppid(),
         status: TaskStatus::Dead,
         user_time: task_inner.user_time,
         kernel_time: task_inner.kernel_time,
@@ -153,7 +153,8 @@ pub fn exit_current_and_run_next(exit_code: i32) {
             // move all child processes under init process
             let mut initproc_inner = INITPROC.inner_exclusive_access(file!(), line!());
             for child in process_inner.children.iter() {
-                child.inner_exclusive_access(file!(), line!()).parent = Some(Arc::downgrade(&INITPROC));
+                child.inner_exclusive_access(file!(), line!()).parent =
+                    Some(Arc::downgrade(&INITPROC));
                 initproc_inner.children.push(child.clone());
             }
         }

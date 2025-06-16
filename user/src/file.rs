@@ -54,7 +54,6 @@ pub fn read_proc(pid: usize, ti: &TaskInfo) -> isize {
 }
 
 pub fn ls() -> isize {
-    // unimplemented!("lstat");
     sys_ls()
 }
 
