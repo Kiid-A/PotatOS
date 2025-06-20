@@ -75,7 +75,7 @@ There is NO WARRANTY, to the extent permitted by law.
 ### 运行程序
 
 ```sh
-$ git clone https://github.com/rcore-os/rCore-Tutorial-v3.git
+$ git clone https://github.com/Kiid-A/PotatOS.git
 $ cd PotatOS/os
 $ make run
 ```
